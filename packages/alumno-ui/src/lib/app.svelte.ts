@@ -5,7 +5,7 @@ import cursoJson from "@rlp/curso/alumno.json";
 import type { PoliticaPegado } from "@rlp/editor";
 import { EjecutorPython, type OpcionesEjecutor } from "@rlp/python-worker";
 import { backend } from "./backend";
-import type { EstadoActividad, EstadoAlumno, EstadoApp } from "./tipos";
+import type { EstadoActividad, EstadoAlumno, EstadoApp, EstadoSincronizacion, SesionIniciada } from "./tipos";
 
 export const curso = cursoJson as Curso;
 
@@ -16,11 +16,12 @@ export type Seleccion =
   | { tipo: "estadisticas" };
 
 export const app = $state({
-  vista: "cargando" as "cargando" | "inicio" | "principal",
+  vista: "cargando" as "cargando" | "inicio" | "cambiar-clave" | "principal" | "profesor",
   estadoApp: null as EstadoApp | null,
   alumno: null as EstadoAlumno | null,
   seleccion: { tipo: "inicio" } as Seleccion,
   aviso: "" as string,
+  sincronizacion: null as EstadoSincronizacion | null,
   tema: (localStorageSeguro("rlp-tema") ?? "sistema") as "sistema" | "claro" | "oscuro",
 });
 
@@ -62,42 +63,49 @@ export async function cargarEstadoApp() {
 export function entrar(estado: EstadoAlumno) {
   app.alumno = estado;
   app.seleccion = { tipo: "inicio" };
-  app.vista = "principal";
+  app.vista = estado.debe_cambiar_clave ? "cambiar-clave" : "principal";
   void python.iniciar().catch(() => undefined);
 }
 
+/** Lleva a cada quien a su área tras iniciar sesión (o reanudar la sesión guardada). */
+export function entrarSesion(s: SesionIniciada) {
+  if (s.rol === "profesor") {
+    app.alumno = null;
+    app.vista = "profesor";
+  } else {
+    entrar(s.estado);
+  }
+}
+
+let quitarEscuchas: (() => void)[] = [];
+
+/** Escucha el estado de sincronización y los cambios que llegan de la nube. */
+export async function escucharNucleo() {
+  const b = await backend();
+  quitarEscuchas.forEach((f) => f());
+  quitarEscuchas = [
+    b.alSincronizar((e) => (app.sincronizacion = e)),
+    b.alCambiarAlumno((e) => {
+      if (!app.alumno || app.alumno.perfil.perfil_id !== e.perfil.perfil_id) return;
+      app.alumno.grupo = e.grupo;
+      app.alumno.debe_cambiar_clave = e.debe_cambiar_clave;
+      for (const [id, a] of Object.entries(e.actividades)) app.alumno.actividades[id] = a;
+    }),
+  ];
+}
+
 export async function salir() {
+  await prepararCierre();
   await (await backend()).cerrarSesion();
   app.alumno = null;
   app.vista = "inicio";
   await cargarEstadoApp();
 }
 
-/** Celular o tableta con la app nativa (Android): barra de teclas, QR, "Guardar como". */
+/** Celular o tableta (pantalla táctil sin teclado físico). */
 export function esMovil(): boolean {
   const p = app.estadoApp?.plataforma;
   return p === "android" || p === "ios";
-}
-
-/** Versión web (PWA): los datos viven en el navegador y las entregas se descargan. */
-export function esWeb(): boolean {
-  return app.estadoApp?.plataforma === "web";
-}
-
-/** Exportar a un archivo con nombre ("Guardar como" o descarga) en lugar de elegir una carpeta. */
-export function exportarConNombre(): boolean {
-  return esMovil() || esWeb();
-}
-
-/** Unirse al grupo escaneando el QR que muestra la App Profesor. */
-export function puedeEscanearQr(): boolean {
-  if (esMovil()) return true;
-  return esWeb() && typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
-}
-
-/** Dónde se guardan los perfiles, para los textos de la interfaz. */
-export function lugarDeDatos(): string {
-  return esWeb() ? "este navegador" : esMovil() ? "la app" : "la carpeta de la app";
 }
 
 /** Pantalla táctil sin teclado físico (muestra la barra de teclas de código). */
@@ -110,14 +118,8 @@ export function esTactil(): boolean {
   }
 }
 
-/** Fecha para nombres de archivo, igual que en Rust: AAAAMMDD-HHMM. */
-export function fechaArchivo(d = new Date()): string {
-  const dos = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}${dos(d.getMonth() + 1)}${dos(d.getDate())}-${dos(d.getHours())}${dos(d.getMinutes())}`;
-}
-
 export function politicaPegado(): PoliticaPegado {
-  return app.alumno?.grupo?.politicas.pegado ?? app.estadoApp?.grupo?.politicas.pegado ?? "bloquear";
+  return app.alumno?.grupo?.politicas.pegado ?? "bloquear";
 }
 
 export function registrarSalidas(): boolean {
@@ -158,6 +160,11 @@ export const alCerrar = new Set<() => Promise<unknown>>();
 
 export async function prepararCierre() {
   await Promise.allSettled([...alCerrar].map((f) => f()));
+  try {
+    await (await backend()).vaciar();
+  } catch {
+    /* sin núcleo todavía */
+  }
 }
 
 let temporizadorAviso: ReturnType<typeof setTimeout> | null = null;

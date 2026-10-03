@@ -22,7 +22,8 @@ import {
   type Firestore,
 } from "firebase/firestore";
 
-const env = import.meta.env;
+// `?? {}`: fuera de Vite (Node, Playwright) import.meta.env no existe.
+const env: Partial<ImportMetaEnv> = import.meta.env ?? {};
 
 /** ¿Usar los emuladores locales (VITE_FIREBASE_EMULATOR=1)? */
 export const usaEmulador = env.VITE_FIREBASE_EMULATOR === "1";

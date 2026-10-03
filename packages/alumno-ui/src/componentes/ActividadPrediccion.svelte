@@ -4,6 +4,7 @@
   import { onMount } from "svelte";
   import { backend } from "../lib/backend";
   import { actualizarActividad, app, avisar, refrescarEstadisticas, registrarEvento } from "../lib/app.svelte";
+  import { sinPegar } from "../lib/sinPegar";
   import Consola from "./Consola.svelte";
   import Pistas from "./Pistas.svelte";
 
@@ -46,10 +47,8 @@
     void consola?.ejecutar(actividad.codigo ?? "");
   }
 
-  function pegar(e: ClipboardEvent) {
-    e.preventDefault();
-    const chars = e.clipboardData?.getData("text/plain").length ?? 0;
-    void registrarEvento("pegado", id, { chars, via: "teclado", interno: false, permitido: false, destino: "prediccion" });
+  function pegar({ chars, via }: { chars: number; via: string }) {
+    void registrarEvento("pegado", id, { chars, via, interno: false, permitido: false, destino: "prediccion" });
     avisar("🚫 Pegar está deshabilitado: escribe tu respuesta.");
   }
 </script>
@@ -59,7 +58,7 @@
   <div class="bloque-codigo python"><pre><code>{@html resaltarPython((actividad.codigo ?? "").replace(/\n$/, ""))}</code></pre></div>
 
   <label for="resp">¿Qué mostrará en la consola?</label>
-  <textarea id="resp" rows="6" bind:value={respuesta} onpaste={pegar} ondrop={(e) => e.preventDefault()} spellcheck="false"
+  <textarea id="resp" rows="6" bind:value={respuesta} use:sinPegar={pegar} spellcheck="false"
     placeholder="Escribe aquí la salida, línea por línea"></textarea>
 
   <div class="fila acciones">
@@ -79,7 +78,7 @@
   <Pistas {id} pistas={actividad.pistas} />
 
   {#if verReal}
-    <div class="consola-real"><Consola bind:this={consola} compacta /></div>
+    <div class="consola-real"><Consola bind:this={consola} compacta alPegar={(chars) => registrarEvento("pegado", id, { chars, via: "teclado", interno: false, permitido: false, destino: "consola" })} /></div>
   {/if}
 </div>
 

@@ -1,15 +1,23 @@
 <script lang="ts">
   import type { ErrorPython, ResultadoEjecucion } from "@rlp/python-worker";
   import { tick } from "svelte";
-  import { python } from "../lib/app.svelte";
+  import { avisar, python } from "../lib/app.svelte";
+  import { sinPegar } from "../lib/sinPegar";
   import ErrorPy from "./ErrorPython.svelte";
 
   interface Props {
     /** Clic en "ir a la línea" de un error. */
     alIrALinea?: (linea: number) => void;
+    /** Intento de pegar en el dato de input() (siempre se bloquea). */
+    alPegar?: (chars: number) => void;
     compacta?: boolean;
   }
-  let { alIrALinea, compacta = false }: Props = $props();
+  let { alIrALinea, alPegar, compacta = false }: Props = $props();
+
+  function pegadoBloqueado({ chars }: { chars: number }) {
+    alPegar?.(chars);
+    avisar("🚫 Pegar está deshabilitado: escribe el dato tú mismo.");
+  }
 
   type Tipo = "out" | "err" | "entrada" | "sistema";
   let segmentos: { texto: string; tipo: Tipo }[] = $state([]);
@@ -116,7 +124,8 @@
     {#if esperando}
       <form onsubmit={enviar} class="entrada">
         <span aria-hidden="true">›</span>
-        <input bind:this={campo} bind:value={entrada} aria-label="Dato para el programa" autocomplete="off" spellcheck="false" />
+        <input bind:this={campo} bind:value={entrada} aria-label="Dato para el programa" autocomplete="off" spellcheck="false"
+          use:sinPegar={pegadoBloqueado} />
         <button type="submit" class="chico">Enviar ⏎</button>
       </form>
     {/if}

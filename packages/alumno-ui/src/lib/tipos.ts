@@ -1,16 +1,11 @@
-// Tipos que devuelve el núcleo en Rust (ver crates/rlp-core).
+// Tipos que comparten la interfaz del alumno y su núcleo (Firebase o simulado).
 
 export interface PerfilPublico {
+  /** ID estable del alumno (alumnos/{alumnoId}). */
   perfil_id: string;
   numero_control: string;
   nombre: string;
   creado: number;
-}
-
-export interface PerfilLocal {
-  perfil: PerfilPublico;
-  carpeta: string;
-  grupo: string | null;
 }
 
 export interface Politicas {
@@ -21,23 +16,15 @@ export interface Politicas {
 export interface GrupoInfo {
   grupo_id: string;
   nombre: string;
-  materia: string;
-  periodo: string;
-  profesor: string;
   politicas: Politicas;
-  regex_control: string;
-  creado: number;
 }
 
 export interface EstadoApp {
   version: string;
   plataforma: string;
-  carpeta_datos: string;
-  escribible: boolean;
-  grupo: GrupoInfo | null;
-  perfiles: PerfilLocal[];
-  puede_generar_exe: boolean;
   dev: boolean;
+  /** ¿Ya hay un profesor configurado? (null: no se pudo saber sin conexión). */
+  hay_profesor: boolean | null;
   autoprueba?: string | null;
 }
 
@@ -51,7 +38,14 @@ export interface EstadoActividad {
   respuesta: string | null;
   pistas: number;
   actualizado: number;
-  dispositivo: string;
+  /** Calificación o comentario del profesor (lo escribe la app del profesor). */
+  nota?: NotaActividad | null;
+}
+
+export interface NotaActividad {
+  calificacion: number | null;
+  comentario: string;
+  actualizado: number;
 }
 
 export interface Contadores {
@@ -76,36 +70,13 @@ export interface Estadisticas {
   por_actividad: Record<string, Contadores>;
 }
 
-export interface NotaActividad {
-  calificacion: number | null;
-  comentario: string;
-  actualizado: number;
-}
-
-/** Retroalimentación firmada del profesor (archivo .rlpr). */
-export interface Retroalimentacion {
-  profesor: string;
-  creado: number;
-  actividades: Record<string, NotaActividad>;
-}
-
 export interface EstadoAlumno {
   perfil: PerfilPublico;
-  dispositivo: string;
   grupo: GrupoInfo | null;
   actividades: Record<string, EstadoActividad>;
   estadisticas: Estadisticas;
-  retroalimentacion?: Retroalimentacion | null;
-  /** Código de recuperación nuevo (tras entrar con un archivo de acceso); se muestra una vez. */
-  codigo_nuevo?: string;
-}
-
-/** Datos de un archivo de acceso del profesor (.rlpa). */
-export interface InfoAcceso {
-  nombre: string;
-  numero_control: string;
-  profesor: string;
-  perfil_local: boolean;
+  /** Primer acceso (o contraseña restablecida): debe elegir una contraseña nueva antes de seguir. */
+  debe_cambiar_clave: boolean;
 }
 
 export interface ResultadoGuardado {
@@ -113,17 +84,11 @@ export interface ResultadoGuardado {
   codigo: string;
 }
 
-export interface ResumenImportacion {
-  eventos_nuevos: number;
-  actividades_actualizadas: string[];
-  dispositivos: string[];
-  conflictos: string[];
-}
+/** Resultado del login de la pantalla común. */
+export type SesionIniciada = { rol: "alumno"; estado: EstadoAlumno } | { rol: "profesor" };
 
-export type Secreto =
-  | { tipo: "contrasena"; contrasena: string }
-  | { tipo: "codigo"; codigo: string; nueva_contrasena: string }
-  | { tipo: "acceso"; archivo: string; temporal: string; nueva_contrasena: string };
+/** Estado de la sincronización con la nube (indicador en la barra). */
+export type EstadoSincronizacion = "sin-conexion" | "sincronizando" | "sincronizado";
 
 export function contadoresVacios(): Contadores {
   return {

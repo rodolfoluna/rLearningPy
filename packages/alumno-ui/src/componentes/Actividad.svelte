@@ -12,7 +12,7 @@
   const anterior = $derived(i > 0 ? orden[i - 1] : null);
   const siguiente = $derived(i < orden.length - 1 ? orden[i + 1] : null);
   const estado = $derived(app.alumno?.actividades[actividad.id]);
-  const nota = $derived(app.alumno?.retroalimentacion?.actividades[actividad.id]);
+  const nota = $derived(estado?.nota);
 </script>
 
 <div class="actividad">
@@ -38,7 +38,7 @@
     <aside class="retro" data-retroalimentacion>
       <span class="icono" aria-hidden="true">📬</span>
       <div>
-        <strong>Tu profesor{app.alumno?.retroalimentacion?.profesor ? ` (${app.alumno.retroalimentacion.profesor})` : ""}:</strong>
+        <strong>Tu profesor:</strong>
         {#if nota.calificacion !== null}<span class="insignia calif">Calificación {nota.calificacion}</span>{/if}
         {#if nota.comentario}<p>{nota.comentario}</p>{/if}
       </div>

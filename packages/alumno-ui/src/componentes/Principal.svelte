@@ -1,23 +1,20 @@
 <script lang="ts">
   import { Modal, mensajeError } from "@rlp/ui-comun";
   import { backend } from "../lib/backend";
-  import { app, aplicarTema, avisar, cargarEstadoApp, curso, esWeb, exportarConNombre, fechaArchivo, puedeEscanearQr, salir } from "../lib/app.svelte";
+  import { app, aplicarTema, avisar, curso, salir } from "../lib/app.svelte";
+  import IndicadorSync from "./IndicadorSync.svelte";
   import Temario from "./Temario.svelte";
   import Bienvenida from "./Bienvenida.svelte";
   import Leccion from "./Leccion.svelte";
   import Actividad from "./Actividad.svelte";
   import Estadisticas from "./Estadisticas.svelte";
   import { ubicar } from "@rlp/curso";
-  import { tick } from "svelte";
 
   const alumno = $derived(app.alumno!);
   const g = $derived(alumno.estadisticas.global);
   let menuAbierto = $state(false);
   let temarioAbierto = $state(false);
 
-  // Exportar
-  let exportando = $state(false);
-  let exportado = $state("");
   let errorModal = $state("");
 
   // Cuenta
@@ -34,96 +31,6 @@
       ? curso.unidades.flatMap((u) => u.lecciones.map((l) => ({ u, l }))).find((x) => x.l.id === (app.seleccion as { id: string }).id)
       : null,
   );
-
-  async function exportar() {
-    errorModal = "";
-    menuAbierto = false;
-    try {
-      const b = await backend();
-      if (exportarConNombre()) {
-        const nombre = `${alumno.perfil.numero_control.replace(/[^\p{L}\p{N}]/gu, "")}_${fechaArchivo()}.rlp`;
-        const destino = await b.elegirDestino("Guardar mi entrega", nombre);
-        if (!destino) return;
-        exportando = true;
-        await b.exportarA(destino);
-        exportado = nombre;
-        return;
-      }
-      const carpeta = await b.elegirCarpeta("¿Dónde guardo tu entrega? (por ejemplo, tu memoria USB)");
-      if (!carpeta) return;
-      exportando = true;
-      exportado = await b.exportar(carpeta);
-    } catch (e) {
-      errorModal = mensajeError(e);
-      exportado = "error";
-    } finally {
-      exportando = false;
-    }
-  }
-
-  async function importarAvances() {
-    menuAbierto = false;
-    try {
-      const b = await backend();
-      const r = await b.elegirArchivo("Elige el archivo .rlp de tu otro equipo", "rlp", "Avances de LP");
-      if (!r) return;
-      // Cierra la actividad abierta (guarda lo pendiente) para que el editor recargue lo importado.
-      app.seleccion = { tipo: "inicio" };
-      await tick();
-      const res = await b.importarAvances(r);
-      app.alumno = await b.estado();
-      const partes = [`${res.eventos_nuevos} registros nuevos`, `${res.actividades_actualizadas.length} actividades actualizadas`];
-      if (res.conflictos.length) partes.push(`${res.conflictos.length} conflicto(s)`);
-      avisar(`Avances importados: ${partes.join(", ")}.`, 6000);
-    } catch (e) {
-      avisar(mensajeError(e), 6000);
-    }
-  }
-
-  async function importarRetroalimentacion() {
-    menuAbierto = false;
-    try {
-      const b = await backend();
-      const r = await b.elegirArchivo("Elige el archivo de retroalimentación de tu profesor", "rlpr", "Retroalimentación de LP");
-      if (!r) return;
-      const retro = await b.importarRetroalimentacion(r);
-      app.alumno = await b.estado();
-      const n = Object.keys(retro.actividades).length;
-      avisar(`Retroalimentación de ${retro.profesor}: ${n} actividad(es) con calificación o comentario.`, 6000);
-    } catch (e) {
-      avisar(mensajeError(e), 6000);
-    }
-  }
-
-  async function unirseGrupo() {
-    menuAbierto = false;
-    try {
-      const b = await backend();
-      const r = await b.elegirArchivo("Elige el archivo de grupo (.rlpg)", "rlpg", "Grupo de LP");
-      if (!r) return;
-      const info = await b.unirseGrupo(r);
-      app.alumno = await b.estado();
-      await cargarEstadoApp();
-      avisar(`Ahora perteneces al grupo ${info.nombre}.`);
-    } catch (e) {
-      avisar(mensajeError(e), 6000);
-    }
-  }
-
-  async function unirseConQr() {
-    menuAbierto = false;
-    try {
-      const b = await backend();
-      const texto = await b.escanearQr();
-      if (!texto) return;
-      const info = await b.unirseGrupoQr(texto);
-      app.alumno = await b.estado();
-      await cargarEstadoApp();
-      avisar(`Ahora perteneces al grupo ${info.nombre}.`);
-    } catch (e) {
-      avisar(mensajeError(e), 6000);
-    }
-  }
 
   async function cambiarClave() {
     errorModal = "";
@@ -151,6 +58,7 @@
       <span aria-hidden="true">🐍</span> <span class="titulo">{curso.titulo}</span>
     </button>
     <span class="espaciador"></span>
+    <IndicadorSync />
     <button class="fantasma contadores" onclick={() => ir({ tipo: "estadisticas" })} title="Tus estadísticas (tu profesor también las ve)">
       <span class="insignia" data-contador="copias">📋 Copias <strong>{g.copias}</strong></span>
       <span class="insignia" class:alerta={g.pegados_intentos > 0} data-contador="pegados">🚫 Intentos de pegar <strong>{g.pegados_intentos}</strong></span>
@@ -164,14 +72,7 @@
       {#if menuAbierto}
         <div class="menu" role="menu">
           <div class="suave quien">{alumno.perfil.numero_control}{alumno.grupo ? ` · ${alumno.grupo.nombre}` : " · sin grupo"}</div>
-          <button role="menuitem" onclick={exportar}>📤 Exportar entrega</button>
-          <button role="menuitem" onclick={importarAvances}>📥 Importar avances de otro equipo</button>
-          <button role="menuitem" onclick={importarRetroalimentacion}>📬 Importar retroalimentación del profesor</button>
           <button role="menuitem" onclick={() => { menuAbierto = false; ir({ tipo: "estadisticas" }); }}>📊 Mis estadísticas</button>
-          <button role="menuitem" onclick={unirseGrupo}>👥 {alumno.grupo ? "Cambiar de grupo" : "Unirme a un grupo"}</button>
-          {#if puedeEscanearQr()}
-            <button role="menuitem" onclick={unirseConQr}>📷 Unirme con el QR del grupo</button>
-          {/if}
           <button role="menuitem" onclick={() => { menuAbierto = false; modalClave = true; }}>🔑 Cambiar contraseña</button>
           <button role="menuitem" onclick={() => aplicarTema(app.tema === "oscuro" ? "claro" : "oscuro")}>
             🌓 Tema {app.tema === "oscuro" ? "claro" : "oscuro"}
@@ -203,24 +104,6 @@
     </main>
   </div>
 </div>
-
-<Modal titulo="Exportar entrega" abierto={exportando || !!exportado} cerrar={() => (exportado = "")}>
-  {#if exportando}
-    <p>Generando tu archivo…</p>
-  {:else if exportado === "error"}
-    <p class="error">{errorModal}</p>
-  {:else}
-    <p class="exito-msg">{esWeb() ? "Listo. Se descargó tu entrega (búscala en Descargas):" : "Listo. Tu entrega se guardó en:"}</p>
-    <p class="ruta">{exportado}</p>
-    <p class="suave">
-      Entrega este archivo a tu profesor. También te sirve para continuar en otro equipo o en tu celular
-      (opción "Tengo mis avances en un archivo"). Solo tú (con tu contraseña) y tu profesor pueden abrirlo.
-    </p>
-  {/if}
-  {#snippet acciones()}
-    <button class="primario" onclick={() => (exportado = "")} disabled={exportando}>Cerrar</button>
-  {/snippet}
-</Modal>
 
 <Modal titulo="Cambiar contraseña" abierto={modalClave} cerrar={() => (modalClave = false)}>
   <form id="form-clave" onsubmit={(e) => { e.preventDefault(); cambiarClave(); }}>
@@ -316,13 +199,6 @@
     flex: 1;
     min-width: 0;
     overflow: auto;
-  }
-  .ruta {
-    font-family: var(--fuente-codigo);
-    word-break: break-all;
-    background: var(--superficie-2);
-    padding: 0.5em;
-    border-radius: var(--radio-chico);
   }
   .solo-movil {
     display: none;

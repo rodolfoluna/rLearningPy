@@ -55,5 +55,6 @@ export default defineConfig({
   server: { port: 1422, strictPort: true, headers: aislamiento },
   preview: { port: 1422, strictPort: true, headers: aislamiento },
   worker: { format: "es" },
+  define: { __VERSION_APP__: JSON.stringify(JSON.parse(readFileSync(join(raiz, "package.json"), "utf8")).version) },
   build: { target: "es2022", chunkSizeWarningLimit: 2000 },
 });

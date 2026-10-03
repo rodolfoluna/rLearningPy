@@ -1,0 +1,79 @@
+rules_version = '2';
+
+// Reglas de Firestore (ver packages/nube/src/modelo.ts para el modelo de datos).
+//  - El profesor (config/app.profesorUid) lee y escribe todo. config/app solo se puede crear una
+//    vez: hay un único profesor.
+//  - Cada alumno lee y escribe solo alumnos/{suId}/**, con suId = usuarios/{uid}.alumnoId; de su
+//    documento alumnos/{suId} solo puede cambiar debeCambiarClave (a false) y ultimaSync.
+//  - logins/{control} es público (traduce el número de control al correo de acceso vigente).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function autenticado() {
+      return request.auth != null;
+    }
+    function rutaConfig() {
+      return /databases/$(database)/documents/config/app;
+    }
+    function rutaUsuario() {
+      return /databases/$(database)/documents/usuarios/$(request.auth.uid);
+    }
+    function esProfesor() {
+      return autenticado() && exists(rutaConfig()) && get(rutaConfig()).data.profesorUid == request.auth.uid;
+    }
+    function miAlumnoId() {
+      return get(rutaUsuario()).data.alumnoId;
+    }
+    function esAlumno(alumnoId) {
+      return autenticado() && exists(rutaUsuario()) && miAlumnoId() == alumnoId;
+    }
+
+    match /config/app {
+      // Legible sin sesión: la pantalla de acceso necesita saber si ya hay profesor.
+      allow read: if true;
+      allow create: if autenticado()
+        && !exists(rutaConfig())
+        && request.resource.data.profesorUid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['profesorUid', 'correo', 'creado']);
+      allow update: if esProfesor() && request.resource.data.profesorUid == resource.data.profesorUid;
+      allow delete: if false;
+    }
+
+    match /alumnos/{alumnoId} {
+      allow read: if esAlumno(alumnoId) || esProfesor();
+      allow create, delete: if esProfesor();
+      allow update: if esProfesor()
+        || (esAlumno(alumnoId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['debeCambiarClave', 'ultimaSync'])
+          && (!('debeCambiarClave' in request.resource.data.diff(resource.data).affectedKeys())
+            || request.resource.data.debeCambiarClave == false));
+
+      // Progreso (actividades, resumen/contadores). Ojo: {resto=**} solo, sin {subcoleccion},
+      // también coincidiría con el propio alumnos/{alumnoId}.
+      match /{subcoleccion}/{resto=**} {
+        allow read, write: if esAlumno(alumnoId) || esProfesor();
+      }
+    }
+
+    // Tablero del profesor: collectionGroup('actividades').
+    match /{ruta=**}/actividades/{actividadId} {
+      allow read: if esProfesor();
+    }
+
+    match /usuarios/{uid} {
+      allow read: if (autenticado() && request.auth.uid == uid) || esProfesor();
+      allow write: if esProfesor();
+    }
+
+    match /grupos/{grupoId} {
+      allow read: if esProfesor()
+        || (autenticado() && exists(rutaUsuario())
+          && get(/databases/$(database)/documents/alumnos/$(miAlumnoId())).data.grupo == grupoId);
+      allow write: if esProfesor();
+    }
+
+    match /logins/{control} {
+      allow read: if true;
+      allow write: if esProfesor();
+    }
+  }
+}

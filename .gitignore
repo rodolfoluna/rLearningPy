@@ -45,3 +45,8 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# Emuladores de Firebase
+firestore-debug.log
+firebase-debug.log
+ui-debug.log

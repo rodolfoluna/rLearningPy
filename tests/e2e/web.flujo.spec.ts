@@ -1,32 +1,33 @@
-import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import { esperarEntrada, registrarErrores } from "./web.diagnostico";
 
-// Versión web (PWA) de la App Alumno con el núcleo real: Rust en WebAssembly y perfiles en
-// IndexedDB. La interfaz es la misma que la de la app nativa.
-
-// TODO(etapa 4): reescribir este flujo para el backend de Firebase (login, sincronización).
-test.skip(true, "Pendiente: el flujo dependía del núcleo WebAssembly (eliminado)");
+// La app web con el núcleo simulado (en memoria, `?simulado`): pantalla de acceso común, cambio de
+// contraseña obligatorio, input(), bloqueo de pegado fuera del editor y entrada del profesor.
+// Las cuentas de demostración están en packages/alumno-ui/src/lib/backend-simulado.ts.
 
 const capturas = "tests/e2e/capturas";
 
-async function registrarse(page: Page, control: string, nombre: string) {
-  await page.goto("/");
-  await page.getByRole("tab", { name: "Soy nuevo" }).click();
+async function entrarComoAlumno(page: Page, control: string) {
+  await page.goto("/?simulado");
   await page.getByLabel("Número de control").fill(control);
-  await page.getByLabel("Nombre completo").fill(nombre);
-  await page.getByLabel("Contraseña", { exact: true }).fill("contraseña-web");
-  await page.getByLabel("Repite la contraseña").fill("contraseña-web");
-  await page.getByRole("button", { name: "Crear mi perfil" }).click();
-  await expect(page.getByText("Tu código de recuperación")).toBeVisible({ timeout: 30_000 });
-  await page.getByLabel("Ya lo anoté en un lugar seguro").check();
-  await page.getByRole("button", { name: "Empezar el curso" }).click();
-  await expect(page.getByRole("heading", { name: new RegExp(`Hola, ${nombre.split(" ")[0]}`) })).toBeVisible();
+  await page.getByLabel("Contraseña").fill("gato-1234");
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page.getByRole("heading", { name: "Elige tu contraseña" })).toBeVisible();
+  await page.getByLabel("Contraseña nueva", { exact: true }).fill("corta");
+  await page.getByLabel("Repite la contraseña nueva").fill("corta");
+  await page.getByRole("button", { name: "Guardar y continuar" }).click();
+  await expect(page.getByText("al menos 8 caracteres").last()).toBeVisible();
+  await page.getByLabel("Contraseña nueva", { exact: true }).fill("contraseña-web");
+  await page.getByLabel("Repite la contraseña nueva").fill("contraseña-web");
+  await page.getByRole("button", { name: "Guardar y continuar" }).click();
+  await expect(page.getByRole("heading", { name: /Hola, Alumno/ })).toBeVisible();
 }
 
-test("registro, programa con input(), recarga y entrega descargada", async ({ page }) => {
+test("acceso, cambio de contraseña, input() y pegado bloqueado", async ({ page }) => {
   const errores = registrarErrores(page);
-  await registrarse(page, "21340500", "Karla Web");
+  await entrarComoAlumno(page, "21340500");
+  await expect(page.locator('[data-sync="sincronizado"]')).toBeVisible();
+
   await page.locator('[data-actividad="u0-hola-mundo"]').click();
   const editor = page.locator("[data-editor] .cm-content");
   await editor.click();
@@ -36,29 +37,36 @@ test("registro, programa con input(), recarga y entrega descargada", async ({ pa
   await page.getByRole("button", { name: "▶ Ejecutar" }).click();
   const dato = page.getByLabel("Dato para el programa");
   await esperarEntrada(page, dato, errores);
+  await page.evaluate(() => navigator.clipboard.writeText("pegado"));
+  await dato.focus();
+  await page.keyboard.press("Control+V");
+  await expect(dato).toHaveValue("");
   await dato.fill("Web");
   await dato.press("Enter");
   await expect(page.locator("[data-consola]")).toContainText("Hola, Web");
+  await expect(page.locator('[data-contador="pegados"] strong')).toHaveText("1");
   await page.screenshot({ path: `${capturas}/web-01-input.png` });
 
-  // Recargar: el perfil y su código siguen en el navegador.
-  await page.waitForTimeout(1500); // el editor guarda en lotes
-  await page.reload();
-  await expect(page.getByText(/se guardan cifrados en este navegador/)).toBeVisible();
-  await page.getByRole("button", { name: /Karla Web/ }).click();
-  await page.getByLabel("Contraseña").fill("contraseña-web");
-  await page.getByRole("button", { name: "Entrar" }).click();
-  await page.locator('[data-actividad="u0-hola-mundo"]').click();
-  await expect(page.locator("[data-editor] .cm-content")).toContainText('print("Hola,", nombre)');
+  // Predicción: pegar en la respuesta tampoco inserta nada.
+  await page.locator('[data-actividad="u0-predice-comentarios"]').click();
+  const respuesta = page.getByLabel("¿Qué mostrará en la consola?");
+  await respuesta.focus();
+  await page.keyboard.press("Control+V");
+  await expect(respuesta).toHaveValue("");
+  await expect(page.locator('[data-contador="pegados"] strong')).toHaveText("2");
+});
 
-  // Exportar descarga el .rlp.
-  const descarga = page.waitForEvent("download");
-  await page.getByRole("button", { name: /Karla Web|^K/ }).first().click();
-  await page.getByRole("menuitem", { name: /Exportar entrega/ }).click();
-  const archivo = await descarga;
-  expect(archivo.suggestedFilename()).toMatch(/^21340500_\d{8}-\d{4}\.rlp$/);
-  const ruta = await archivo.path();
-  expect(readFileSync(ruta!).subarray(0, 2).toString()).toBe("PK"); // zip
-  await expect(page.getByText(/Se descargó tu entrega/)).toBeVisible();
-  await page.screenshot({ path: `${capturas}/web-02-exportar.png` });
+test("contraseña incorrecta y entrada del profesor", async ({ page }) => {
+  await page.goto("/?simulado");
+  await page.getByLabel("Número de control").fill("21340501");
+  await page.getByLabel("Contraseña").fill("otra-cosa");
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page.getByText("Número de control o contraseña incorrectos.")).toBeVisible();
+
+  await page.getByLabel("Número de control").fill("profesor@demo.local");
+  await page.getByLabel("Contraseña").fill("profesor-demo");
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page.locator("[data-area-profesor]")).toBeVisible();
+  await page.getByRole("button", { name: "Cerrar sesión" }).click();
+  await expect(page.getByLabel("Número de control")).toBeVisible();
 });

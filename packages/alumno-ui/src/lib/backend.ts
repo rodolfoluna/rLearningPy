@@ -1,36 +1,31 @@
 // Acceso al núcleo. La cáscara elige el suyo al arrancar (`iniciarApp`): Firebase en la versión
-// web (pendiente) o una simulación en memoria para desarrollar y probar la interfaz.
+// web o una simulación en memoria para desarrollar y probar la interfaz.
+//
+// Regla para los núcleos: ninguna operación del alumno espera la confirmación del servidor; todo
+// se guarda primero en este equipo y se sincroniza solo (sin conexión la app sigue igual).
 
 import type { LoteOperaciones } from "@rlp/editor";
 import type {
   EstadoActividad,
   EstadoAlumno,
   EstadoApp,
+  EstadoSincronizacion,
   Estadisticas,
-  GrupoInfo,
-  InfoAcceso,
   ResultadoGuardado,
-  Retroalimentacion,
-  ResumenImportacion,
-  Secreto,
+  SesionIniciada,
 } from "./tipos";
 
 export interface Backend {
   estadoApp(): Promise<EstadoApp>;
-  /** Abre un diálogo para elegir un archivo; devuelve la ruta o null. */
-  elegirArchivo(titulo: string, extension: string, nombreFiltro: string): Promise<string | null>;
-  elegirCarpeta(titulo: string): Promise<string | null>;
-  /** Diálogo "Guardar como" (en Android devuelve una URI content://). */
-  elegirDestino(titulo: string, nombre: string): Promise<string | null>;
-  /** Escanea un código QR con la cámara (solo celular). */
-  escanearQr(): Promise<string | null>;
-  abrirCarpeta(ruta: string): Promise<void>;
-  importarGrupo(ruta: string): Promise<GrupoInfo>;
-  importarGrupoQr(contenido: string): Promise<GrupoInfo>;
-  unirseGrupoQr(contenido: string): Promise<GrupoInfo>;
-  registrar(numeroControl: string, nombre: string, contrasena: string): Promise<{ estado: EstadoAlumno; codigo: string }>;
-  iniciarSesion(carpeta: string, secreto: Secreto): Promise<EstadoAlumno>;
-  restaurar(ruta: string, secreto: Secreto): Promise<EstadoAlumno>;
+  /** Sesión guardada en este navegador, si la hay (funciona sin conexión). */
+  reanudarSesion(): Promise<SesionIniciada | null>;
+  /** Login común: número de control (alumno) o correo (profesor). Necesita conexión. */
+  iniciarSesion(usuario: string, contrasena: string): Promise<SesionIniciada>;
+  /** Configuración inicial: crea la cuenta del único profesor. Solo si aún no hay profesor. */
+  configurarProfesor(correo: string, contrasena: string): Promise<void>;
+  /** Primer acceso del alumno: contraseña nueva obligatoria (quita `debe_cambiar_clave`). */
+  cambiarContrasenaInicial(nueva: string): Promise<void>;
+  cambiarContrasena(actual: string, nueva: string): Promise<void>;
   cerrarSesion(): Promise<void>;
   estado(): Promise<EstadoAlumno>;
   estadisticas(): Promise<Estadisticas>;
@@ -41,18 +36,12 @@ export interface Backend {
   registrarRespuesta(id: string, respuesta: string, correcta: boolean, puntos: number): Promise<EstadoActividad>;
   registrarPista(id: string, numero: number): Promise<EstadoActividad>;
   registrarEvento(tipo: string, actividad: string | null, datos: Record<string, unknown>): Promise<void>;
-  exportar(carpeta: string): Promise<string>;
-  /** Exporta al archivo elegido con `elegirDestino`; devuelve el nombre de la entrega. */
-  exportarA(destino: string): Promise<string>;
-  importarAvances(ruta: string): Promise<ResumenImportacion>;
-  importarRetroalimentacion(ruta: string): Promise<Retroalimentacion>;
-  /** Lee un archivo de acceso del profesor (comprueba su firma). */
-  leerAcceso(ruta: string): Promise<InfoAcceso>;
-  /** Entra con el archivo de acceso; `rutaEntrega` solo si el perfil no está en esta carpeta. */
-  entrarConAcceso(rutaAcceso: string, temporal: string, nueva: string, rutaEntrega: string | null): Promise<EstadoAlumno>;
-  cambiarContrasena(actual: string, nueva: string): Promise<void>;
-  unirseGrupo(ruta: string): Promise<GrupoInfo>;
-  generarEjecutable(nombre: string, codigo: string, alProgreso: (linea: string) => void): Promise<string>;
+  /** Pasa a la cola de sincronización lo que se está agrupando (antes de cerrar o recargar). */
+  vaciar(): Promise<void>;
+  /** Avisa los cambios del estado de sincronización; devuelve la función para dejar de escuchar. */
+  alSincronizar(fn: (estado: EstadoSincronizacion) => void): () => void;
+  /** Avisa cuando llegan cambios de otro equipo o del profesor (actividades, grupo). */
+  alCambiarAlumno(fn: (estado: EstadoAlumno) => void): () => void;
 }
 
 let proveedor: (() => Promise<Backend>) | null = null;

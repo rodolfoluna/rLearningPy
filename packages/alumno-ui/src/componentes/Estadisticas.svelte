@@ -29,8 +29,7 @@
 <div class="estadisticas">
   <h1>Mis estadísticas</h1>
   <p class="info">
-    Estas son las mismas estadísticas que verá tu profesor cuando revise tu entrega. Se calculan a partir del historial
-    que guarda la app mientras trabajas.
+    Estas son las mismas estadísticas que ve tu profesor. Se calculan mientras trabajas y se envían con tus avances.
   </p>
   <div class="tarjetas">
     {#each tarjetas as t (t.etiqueta)}

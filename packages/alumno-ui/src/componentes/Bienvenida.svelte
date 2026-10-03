@@ -42,7 +42,7 @@
       <button class="primario" onclick={() => ir({ tipo: "actividad", id: siguiente.id })}>Continuar →</button>
     </div>
   {:else}
-    <div class="exito-msg">🎉 ¡Completaste todas las actividades! Exporta tu entrega para tu profesor.</div>
+    <div class="exito-msg">🎉 ¡Completaste todas las actividades! Tu profesor ya puede ver tu avance.</div>
   {/if}
 
   <h2 class="titulo-unidades">Unidades</h2>

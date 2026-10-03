@@ -1,0 +1,25 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "actividades",
+      "fieldPath": "actualizado",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
+    {
+      "collectionGroup": "actividades",
+      "fieldPath": "ediciones",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "actividades",
+      "fieldPath": "codigo",
+      "indexes": []
+    }
+  ]
+}

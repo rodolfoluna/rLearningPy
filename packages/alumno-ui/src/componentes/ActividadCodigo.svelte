@@ -38,15 +38,6 @@
   let fuente = $state(Number(leer("rlp-fuente") ?? 15));
   let confirmarReinicio = $state(false);
 
-  // Generar ejecutable
-  let modalExe = $state(false);
-  // svelte-ignore state_referenced_locally (el componente se recrea al cambiar de actividad)
-  let nombreExe = $state(actividad.id.replace(/^u\d+-/, "").replace(/-/g, "_"));
-  let progresoExe: string[] = $state([]);
-  let rutaExe = $state("");
-  let errorExe = $state("");
-  let generando = $state(false);
-
   // svelte-ignore state_referenced_locally (el componente se recrea al cambiar de actividad)
   const id = actividad.id;
   let colaGuardado: Promise<unknown> = Promise.resolve();
@@ -272,29 +263,6 @@
     }
   }
 
-  async function generarExe() {
-    if (!editor) return;
-    editor.vaciarOperaciones();
-    errorExe = "";
-    rutaExe = "";
-    progresoExe = [];
-    generando = true;
-    try {
-      const err = await python.sintaxis(editor.texto);
-      if (err) throw new Error(`Corrige primero el error de la línea ${err.linea}: ${err.explicacion}`);
-      rutaExe = await (await backend()).generarEjecutable(nombreExe, editor.texto, (l) => (progresoExe = [...progresoExe.slice(-200), l]));
-      refrescarEstadisticas();
-    } catch (e) {
-      errorExe = mensajeError(e);
-    } finally {
-      generando = false;
-    }
-  }
-
-  async function abrirCarpetaExe() {
-    const carpeta = rutaExe.replace(/[\\/][^\\/]+$/, "");
-    await (await backend()).abrirCarpeta(carpeta);
-  }
 </script>
 
 <div class="espacio" data-panel={panelMovil}>
@@ -324,9 +292,6 @@
       <button class="fantasma chico" onclick={() => cambiarFuente(-1)} title="Letra más chica">A−</button>
       <button class="fantasma chico" onclick={() => cambiarFuente(1)} title="Letra más grande">A+</button>
       <button class="chico" onclick={() => (confirmarReinicio = true)} disabled={cargando} title="Volver al código inicial">↺</button>
-      {#if app.estadoApp?.puede_generar_exe}
-        <button class="chico" onclick={() => ((modalExe = true), (rutaExe = ""), (errorExe = ""))} disabled={cargando} title="Crear un programa .exe">⚙ Crear .exe</button>
-      {/if}
     </div>
     <div class="editor" bind:this={contenedor} style:--editor-fuente="{fuente}px" data-editor>
       {#if errorCarga}<p class="error">{errorCarga}</p>{/if}
@@ -348,7 +313,8 @@
         </button>
       </div>
       <div class="panel" hidden={pestana !== "consola"}>
-        <Consola bind:this={consola} alIrALinea={(l) => editor?.irALinea(l)} />
+        <Consola bind:this={consola} alIrALinea={(l) => editor?.irALinea(l)}
+          alPegar={(chars) => registrarEvento("pegado", id, { chars, via: "teclado", interno: false, permitido: false, destino: "consola" })} />
       </div>
       <div class="panel" hidden={pestana !== "pruebas"}>
         <Resultados {resultado} {enCurso} alIrALinea={(l) => editor?.irALinea(l)} />
@@ -365,31 +331,6 @@
   {/snippet}
 </Modal>
 
-<Modal titulo="Generar ejecutable" abierto={modalExe} cerrar={generando ? undefined : () => (modalExe = false)} ancho="620px">
-  <p class="suave">
-    Crea un programa <strong>.exe</strong> que puedes abrir con doble clic en cualquier computadora con Windows, sin
-    instalar Python. Se guarda en la carpeta <code>mis_ejecutables</code> de la app.
-  </p>
-  <div class="campo">
-    <label for="nexe">Nombre del programa</label>
-    <input id="nexe" bind:value={nombreExe} disabled={generando} />
-  </div>
-  {#if progresoExe.length}
-    <pre class="progreso">{progresoExe.join("\n")}</pre>
-  {/if}
-  {#if errorExe}<p class="error">{errorExe}</p>{/if}
-  {#if rutaExe}
-    <p class="exito-msg">¡Listo! Tu programa está en: <code>{rutaExe}</code></p>
-    <p class="suave">Si el antivirus lo bloquea, pide a tu profesor que agregue la carpeta de la app como excepción.</p>
-  {/if}
-  {#snippet acciones()}
-    {#if rutaExe}<button onclick={abrirCarpetaExe}>📂 Abrir carpeta</button>{/if}
-    <button onclick={() => (modalExe = false)} disabled={generando}>Cerrar</button>
-    <button class="primario" onclick={generarExe} disabled={generando || !nombreExe.trim()}>
-      {generando ? "Generando… (puede tardar un minuto)" : "Generar"}
-    </button>
-  {/snippet}
-</Modal>
 
 <style>
   .espacio {
@@ -489,16 +430,6 @@
   }
   .panel[hidden] {
     display: none;
-  }
-  .progreso {
-    max-height: 220px;
-    overflow: auto;
-    background: var(--consola-fondo);
-    color: var(--consola-texto);
-    padding: 0.5em 0.8em;
-    border-radius: var(--radio-chico);
-    font-size: 0.82em;
-    white-space: pre-wrap;
   }
   @media (max-width: 900px) {
     .espacio {

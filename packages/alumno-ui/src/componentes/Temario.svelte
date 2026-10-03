@@ -12,7 +12,7 @@
   function estadoDe(a: Actividad): "completada" | "progreso" | "pendiente" {
     const e = actividades[a.id];
     if (e?.completada) return "completada";
-    if (e && (e.intentos > 0 || (e.dispositivo && e.codigo !== (a.codigo_inicial ?? "")))) return "progreso";
+    if (e && (e.intentos > 0 || e.codigo !== (a.codigo_inicial ?? ""))) return "progreso";
     return "pendiente";
   }
 
