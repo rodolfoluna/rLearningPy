@@ -1,0 +1,3 @@
+# El lanzador no debe depender de vcruntime140.dll (que no todas las PC tienen): CRT estático.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

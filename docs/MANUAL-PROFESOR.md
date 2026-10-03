@@ -142,7 +142,22 @@ clase. Si te preocupa la cuota, revisa **Firestore → Uso** en la consola de Fi
   en el repositorio público (`curso/`). No uses la app para exámenes cuya solución deba ser
   secreta.
 
-## Pendiente (fase 2)
+## 7. Programas `.exe` de los alumnos
 
-Que el alumno genere un **programa `.exe`** con su código desde el navegador aún no está
-disponible.
+En cada actividad de código el alumno puede usar **⚙ Crear programa .exe** para descargar su
+programa como un `.exe` de Windows que se abre sin instalar Python (ver el
+[manual del alumno](MANUAL-ALUMNO.md#8-crear-un-programa-exe)). Se arma en el navegador, sin
+servidor; el contador **Programas .exe** del detalle del alumno dice cuántos ha creado.
+
+- Solo **Windows 10 u 11 de 64 bits** (x64). Se puede descargar desde cualquier equipo
+  (Chromebook, Android, Mac), pero solo se abre en Windows.
+- Solo la **biblioteca estándar** de Python: sin paquetes de `pip`. Tampoco trae `tkinter` ni
+  `turtle` (el Python "embeddable" de Windows no los incluye).
+- **No está firmado**: Windows SmartScreen muestra "Windows protegió tu PC"; hay que elegir
+  **Más información → Ejecutar de todas formas**. Algunos antivirus pueden marcarlo por error.
+- La primera vez que se abre en una computadora extrae Python (unos 25 MB) a
+  `%LOCALAPPDATA%\RealLearningProgramming\`; las siguientes veces abre al instante.
+
+En el laboratorio, si el antivirus de la escuela los bloquea, se puede agregar como excepción la
+carpeta de descargas de los alumnos o `%LOCALAPPDATA%\RealLearningProgramming`. Firmar el
+lanzador (para quitar el aviso de SmartScreen) requiere un certificado de firma de código de pago.

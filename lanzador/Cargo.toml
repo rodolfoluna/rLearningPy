@@ -1,0 +1,28 @@
+[package]
+name = "rlp-lanzador"
+version = "1.0.0"
+edition = "2021"
+description = "Lanzador de RealLearningProgramming: un .exe de Windows con Python embebido que ejecuta el programa del alumno guardado al final del propio archivo."
+publish = false
+
+# Proyecto independiente (no es parte de un workspace de la app web).
+[workspace]
+
+[[bin]]
+name = "rlp-lanzador"
+path = "src/main.rs"
+
+[dependencies]
+zip = { version = "8", default-features = false, features = ["deflate-flate2"] }
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+
+[build-dependencies]
+sha2 = "0.10"
+serde_json = "1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

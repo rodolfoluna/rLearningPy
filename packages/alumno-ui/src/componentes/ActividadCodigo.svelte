@@ -5,7 +5,8 @@
   import { Markdown, Modal, mensajeError } from "@rlp/ui-comun";
   import { onDestroy, onMount } from "svelte";
   import { backend } from "../lib/backend";
-  import { enDialogoNativo } from "../lib/dialogos";
+  import { conDialogo, enDialogoNativo } from "../lib/dialogos";
+  import { crearEjecutable, guardarArchivo, limpiarNombre, nombreSugerido, obtenerLanzador } from "../lib/ejecutable";
   import {
     actualizarActividad,
     alCerrar,
@@ -37,6 +38,16 @@
   let enCurso: ResultadoPrueba[] = $state([]);
   let fuente = $state(Number(leer("rlp-fuente") ?? 15));
   let confirmarReinicio = $state(false);
+
+  // Crear programa .exe (lanzador de Windows + el código del alumno, armado en el navegador)
+  let modalExe = $state(false);
+  // svelte-ignore state_referenced_locally
+  let nombreExe = $state(nombreSugerido(actividad.id));
+  let creandoExe = $state(false);
+  let avanceExe: number | null = $state(null);
+  let errorExe = $state("");
+  let listoExe = $state("");
+  let ayudaExe = $state(false);
 
   // svelte-ignore state_referenced_locally (el componente se recrea al cambiar de actividad)
   const id = actividad.id;
@@ -254,6 +265,50 @@
     consola?.limpiar();
   }
 
+  function abrirExe() {
+    errorExe = "";
+    listoExe = "";
+    ayudaExe = false;
+    modalExe = true;
+  }
+
+  async function crearExe() {
+    if (!editor || creandoExe) return;
+    editor.vaciarOperaciones();
+    const texto = editor.texto;
+    errorExe = "";
+    listoExe = "";
+    creandoExe = true;
+    avanceExe = null;
+    try {
+      const err = python.ocupado ? null : await python.sintaxis(texto).catch(() => null);
+      if (err) throw new Error(`Corrige primero el error de la línea ${err.linea}: ${err.explicacion}`);
+      const nombre = limpiarNombre(nombreExe);
+      const lanzador = await obtenerLanzador((f) => (avanceExe = f));
+      const archivo = `${nombre}.exe`;
+      // Guardar el archivo puede abrir el diálogo del navegador: no cuenta como salida.
+      await conDialogo(async () => {
+        guardarArchivo(crearEjecutable(lanzador, texto, nombre), archivo);
+        await new Promise((r) => setTimeout(r, 300));
+      });
+      listoExe = archivo;
+      void registrarEvento("ejecutable", id, { nombre, bytes: new TextEncoder().encode(texto).length });
+      if (!leer("rlp-ayuda-exe")) {
+        ayudaExe = true;
+        try {
+          localStorage.setItem("rlp-ayuda-exe", "1");
+        } catch {
+          /* sin almacenamiento */
+        }
+      }
+    } catch (e) {
+      errorExe = mensajeError(e);
+    } finally {
+      creandoExe = false;
+      avanceExe = null;
+    }
+  }
+
   function cambiarFuente(delta: number) {
     fuente = Math.min(26, Math.max(11, fuente + delta));
     try {
@@ -291,6 +346,7 @@
       <span class="espaciador"></span>
       <button class="fantasma chico" onclick={() => cambiarFuente(-1)} title="Letra más chica">A−</button>
       <button class="fantasma chico" onclick={() => cambiarFuente(1)} title="Letra más grande">A+</button>
+      <button class="chico" onclick={abrirExe} disabled={cargando} title="Crear un programa para Windows con tu código">⚙ Crear programa .exe</button>
       <button class="chico" onclick={() => (confirmarReinicio = true)} disabled={cargando} title="Volver al código inicial">↺</button>
     </div>
     <div class="editor" bind:this={contenedor} style:--editor-fuente="{fuente}px" data-editor>
@@ -331,8 +387,65 @@
   {/snippet}
 </Modal>
 
+<Modal titulo="Crear programa .exe" abierto={modalExe} cerrar={creandoExe ? undefined : () => (modalExe = false)} ancho="600px">
+  <p class="suave">
+    Crea un programa <strong>.exe</strong> con tu código que se abre con doble clic en cualquier computadora con
+    <strong>Windows 10 u 11 (64 bits)</strong>, sin instalar Python. Puedes descargarlo desde cualquier equipo, pero solo
+    funciona en Windows. Usa solo lo que trae Python (no paquetes de <code>pip</code> ni <code>turtle</code>/<code>tkinter</code>).
+  </p>
+  <div class="campo">
+    <label for="nexe">Nombre del programa</label>
+    <input id="nexe" bind:value={nombreExe} disabled={creandoExe} maxlength="60" />
+    {#if nombreExe.trim() && limpiarNombre(nombreExe) !== nombreExe.trim()}
+      <small class="suave">Se guardará como <code>{limpiarNombre(nombreExe)}.exe</code></small>
+    {/if}
+  </div>
+  {#if avanceExe !== null}
+    <div class="avance" data-avance-exe>
+      <progress max="1" value={avanceExe}></progress>
+      <small class="suave">Descargando el lanzador (solo la primera vez, unos 13 MB): {Math.round(avanceExe * 100)} %</small>
+    </div>
+  {/if}
+  {#if errorExe}<p class="error">{errorExe}</p>{/if}
+  {#if listoExe}
+    <p class="exito-msg" data-exe-listo>¡Listo! Revisa tus descargas: <code>{listoExe}</code></p>
+  {/if}
+  {#if ayudaExe}
+    <div class="info" data-ayuda-exe>
+      <strong>Cómo abrirlo en Windows</strong>
+      <ol>
+        <li>Abre el archivo <code>.exe</code> desde tus descargas.</li>
+        <li>
+          Como el programa no está firmado, Windows puede mostrar <em>"Windows protegió tu PC"</em> (SmartScreen): haz clic en
+          <strong>Más información</strong> y luego en <strong>Ejecutar de todas formas</strong>.
+        </li>
+        <li>La primera vez tarda unos segundos: prepara Python en la computadora (unos 25 MB).</li>
+        <li>Algunos antivirus pueden avisar o bloquearlo por error; si pasa, pide ayuda a tu profesor.</li>
+      </ol>
+    </div>
+  {/if}
+  {#snippet acciones()}
+    {#if !ayudaExe}<button class="fantasma" onclick={() => (ayudaExe = true)}>¿Cómo lo abro?</button>{/if}
+    <button onclick={() => (modalExe = false)} disabled={creandoExe}>Cerrar</button>
+    <button class="primario" onclick={crearExe} disabled={creandoExe || cargando}>
+      {creandoExe ? "Creando…" : "Crear y descargar"}
+    </button>
+  {/snippet}
+</Modal>
 
 <style>
+  .avance {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0.5rem 0;
+  }
+  .avance progress {
+    width: 100%;
+  }
+  [data-ayuda-exe] ol {
+    margin: 0.4rem 0 0;
+    padding-left: 1.3rem;
+  }
   .espacio {
     flex: 1;
     min-height: 0;

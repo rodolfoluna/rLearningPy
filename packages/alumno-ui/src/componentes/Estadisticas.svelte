@@ -19,6 +19,7 @@
     { etiqueta: "Ejecuciones con error", valor: g.errores },
     { etiqueta: "Veces que probaste", valor: g.pruebas },
     { etiqueta: "Pistas usadas", valor: g.pistas },
+    { etiqueta: "Programas .exe creados", valor: g.ejecutables ?? 0 },
     { etiqueta: "Teclas escritas", valor: g.teclas },
     { etiqueta: "Copias", valor: g.copias, nota: "Copiar sí se permite; se cuenta." },
     { etiqueta: "Intentos de pegar", valor: g.pegados_intentos, alerta: g.pegados_intentos > 0 },

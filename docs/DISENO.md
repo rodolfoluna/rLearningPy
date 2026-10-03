@@ -36,6 +36,8 @@ Firebase Auth (correo/contraseña)  ·  Firestore (caché persistente, cola de e
 - **Ruta base**: relativa (`./`) por defecto; el workflow de Pages compila con
   `RLP_BASE=/<repositorio>/`. El service worker y el manifiesto usan rutas relativas a su
   ubicación, así que funcionan en cualquier subcarpeta.
+- **Programas `.exe`**: el lanzador de Windows (`lanzador/`, Rust) se publica en
+  `lanzador/rlp-lanzador.exe` y la página lo usa para armar el `.exe` del alumno (sección 10).
 - **Área del profesor**: un archivo aparte (`assets/area-profesor-*.js`, con el curso con
   soluciones) que el service worker no guarda por adelantado en los equipos de los alumnos.
 
@@ -145,15 +147,54 @@ avance (completada y puntos nunca bajan). La lógica de completar e intentos est
   área del profesor el semáforo, la línea de tiempo, el ritmo, CSV e informes.
 - **Reglas y cuentas** (`pnpm test:reglas`): emuladores de Auth y Firestore.
 - **Playwright** (`pnpm e2e`): banco del editor y de Python; la app con datos simulados (alumno y
-  profesor).
+  profesor), incluido "Crear programa .exe" con un lanzador falso (revisa el remolque del archivo
+  descargado y que la segunda vez use la caché).
+- **Lanzador** (`cd lanzador && cargo test`, `pnpm lanzador -- --probar`): formato del remolque y
+  un `.exe` real ejecutado con entrada por tubería (en CI, en Windows).
 - **Playwright + emuladores** (`pnpm e2e:emuladores`): la app compilada servida bajo `/rlp/` como
   en Pages; instalación sin conexión del alumno, y el flujo completo profesor ↔ alumno.
 
-## 10. Fase 2 (pendiente)
+## 10. Programas `.exe` (fase 2)
 
-Generar un `.exe` desde el navegador con un **lanzador precompilado**: un ejecutable pequeño (Rust)
-con el Python embebible de Windows que, al ejecutarse, busca al final de su propio archivo el
-script del alumno (`[script][len u32][MAGIC]`) y lo corre en consola. La app descargaría el
-lanzador (cacheado por el service worker), le concatenaría el código con un `Blob` y lo
-descargaría como `<nombre>.exe`, sin servidor y sin conexión. SmartScreen mostrará un aviso por no
-estar firmado.
+PyInstaller no corre en un navegador, así que se usa un **lanzador precompilado** al que la app le
+pega el código del alumno. Todo en el navegador, sin servidor.
+
+**Lanzador** (`lanzador/`, Rust, proyecto independiente): un `.exe` de consola x86_64 que incluye
+(`include_bytes!`) el Python "embeddable" oficial de Windows. La versión, la URL y el SHA-256
+están fijados en `lanzador/python.json`; `scripts/lanzador.mjs` lo descarga y verifica, y
+`build.rs` vuelve a verificar la huella (el `.zip` no está en git). Compilado con `opt-level="z"`,
+LTO, `panic=abort`, `strip` y CRT estático (no necesita `vcruntime140.dll`): ~430 KB de código más
+~12.6 MB de Python, unos 13 MB en total. Al abrirse:
+
+1. Pone la consola en UTF-8 (`SetConsoleOutputCP`/`SetConsoleCP` 65001; los restaura al salir) y
+   el título con el nombre del programa.
+2. Lee el final de su propio archivo (`current_exe`) buscando el remolque:
+   `[nombre UTF-8][len u32 LE]["RLPNOMBR"]` (opcional) `[script UTF-8][len u32 LE]["RLPSCRPT"]`.
+   Sin remolque, explica qué es y termina.
+3. Extrae Python una sola vez a `%LOCALAPPDATA%\RealLearningProgramming\python-<versión>-<sha8>`:
+   en una carpeta temporal que se renombra al final (dos programas abiertos a la vez no ven una
+   extracción a medias); un archivo marca la extracción completa.
+4. Escribe el script en `%TEMP%\rlp-<pid>-…\<nombre>.py` y corre `python.exe` en la misma consola
+   (`input()` funciona), con `PYTHONUTF8=1`, `PYTHONIOENCODING=utf-8` y la carpeta del `.exe` como
+   carpeta de trabajo. Ctrl+C llega a Python (KeyboardInterrupt) y no cierra el lanzador.
+5. Muestra el error (traceback) si lo hubo y espera **"Presiona Enter para salir..."**; devuelve
+   el código de salida de Python.
+
+**App** (`packages/alumno-ui/src/lib/ejecutable.ts`): `obtenerLanzador()` lee
+`lanzador/lanzador.json` (versión, tamaño, SHA-256) y usa la copia de la caché `rlp-lanzador` si
+coincide (o si no hay conexión); si no, lo descarga mostrando el avance, verifica el SHA-256 y lo
+guarda. `armarRemolque()` arma los bytes del final (la misma prueba de bytes en Vitest y en
+`cargo test`) y la descarga es un `Blob([lanzador, remolque])` con `<a download>`. Cada `.exe`
+suma el evento `ejecutable` (contador `ejecutables`).
+
+**Service worker**: el lanzador no entra en la precarga (pesa ~13 MB y la mayoría de los alumnos
+no lo usa) y las rutas `/lanzador/` no pasan por el service worker; la caché `rlp-lanzador` se
+conserva al actualizar la app. Al ser del mismo origen, COOP/COEP no lo bloquean.
+
+**CI**: el job "Compilar el lanzador de Windows" (`windows-latest`, MSVC) corre `cargo test`,
+compila, arma un `.exe` de ejemplo con `input()` y acentos, lo ejecuta y revisa la salida, y pasa
+`rlp-lanzador.exe` + `lanzador.json` al job que compila el sitio.
+
+**Límites**: solo Windows 10/11 x64; solo la biblioteca estándar (sin `pip`, sin `tkinter`); sin
+firma (SmartScreen, posibles falsos positivos de antivirus; firmarlo requiere un certificado de
+pago); la primera ejecución extrae ~25 MB.

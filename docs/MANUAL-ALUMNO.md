@@ -29,7 +29,8 @@ Instalada abre como una app, funciona sin conexión y tu navegador no borra tus 
   - **▶ Ejecutar** para probarlo (si pide datos con `input()`, escríbelos abajo y presiona Enter);
   - **✔ Probar** para correr las pruebas automáticas. Si todas pasan, la actividad queda
     completada y ganas sus puntos;
-  - **Pistas**, si te atoras.
+  - **Pistas**, si te atoras;
+  - **⚙ Crear programa .exe** para llevarte tu programa (ver la sección 8).
 - **Predicción** y **opción múltiple**: responde y revisa la explicación.
 - Si un programa tiene un error, la app te lo explica en español y marca la línea.
 
@@ -58,8 +59,8 @@ calificación y el comentario.
 
 En el menú (tu nombre, arriba a la derecha):
 
-- **📊 Mis estadísticas**: tiempo de práctica, ejecuciones, pruebas, pistas, copias, intentos de
-  pegar y salidas de la ventana.
+- **📊 Mis estadísticas**: tiempo de práctica, ejecuciones, pruebas, pistas, programas `.exe`
+  creados, copias, intentos de pegar y salidas de la ventana.
 - **🔑 Cambiar contraseña** (necesita internet).
 - **Tema claro/oscuro**.
 - **🚪 Cerrar sesión**.
@@ -79,6 +80,21 @@ nada de tu avance. Al entrar, elige otra vez tu contraseña.
 - **Apareció "Hay una versión nueva".** Presiona **Actualizar**: tu trabajo se guarda antes.
 - **`input()` no funciona.** Recarga la página una vez (la primera visita prepara la app).
 
-## Pendiente
+## 8. Crear un programa `.exe`
 
-Crear un programa **`.exe`** con tu código desde la app llegará en una versión futura.
+En una actividad de código, presiona **⚙ Crear programa .exe**, escribe el nombre de tu programa
+y presiona **Crear y descargar**. El archivo `<nombre>.exe` queda en tus **Descargas**; ábrelo con
+doble clic en cualquier computadora con Windows, aunque no tenga Python. Si tu programa usa
+`input()`, escribe los datos en la ventana y presiona Enter. Al terminar, la ventana espera a que
+presiones Enter para cerrarse.
+
+- La primera vez la app descarga el "lanzador" (unos 13 MB); después funciona **sin internet**.
+- Lleva el código tal como está en el editor: corrige primero los errores.
+- Windows puede mostrar **"Windows protegió tu PC"** porque el programa no está firmado: haz
+  clic en **Más información** y luego en **Ejecutar de todas formas**. Si un antivirus lo
+  bloquea, avísale a tu profesor.
+- Solo funciona en **Windows 10 u 11 de 64 bits** y solo con lo que trae Python (no paquetes de
+  `pip`, ni `turtle`/`tkinter`). Puedes descargarlo desde otro equipo, pero se abre en Windows.
+- La primera vez que lo abres en una computadora tarda unos segundos: prepara Python (unos 25 MB)
+  en la carpeta `%LOCALAPPDATA%\RealLearningProgramming`.
+- Si tu programa abre archivos (`open("datos.txt")`), los busca en la carpeta donde está el `.exe`.

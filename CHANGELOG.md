@@ -3,6 +3,25 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Las versiones
 siguen [SemVer](https://semver.org/lang/es/). El curso tiene su propia versión (`curso/curso.yaml`).
 
+## [Sin publicar]
+
+### Programas `.exe` desde el navegador (fase 2)
+
+- Botón **⚙ Crear programa .exe** en las actividades de código: pide el nombre (se limpia para
+  Windows), descarga el lanzador una vez (con avance; luego sin conexión, desde la caché
+  `rlp-lanzador`), le pega el código y descarga `<nombre>.exe`. La primera vez explica cómo pasar
+  el aviso de SmartScreen. Cuenta en el contador `ejecutables` (visible en "Mis estadísticas" y
+  en el detalle del alumno).
+- Nuevo **lanzador** (`lanzador/`, Rust): `.exe` de consola con el Python 3.14.8 "embeddable"
+  oficial (SHA-256 fijo) que extrae Python una vez a `%LOCALAPPDATA%`, ejecuta el script del
+  final de su archivo con la consola en UTF-8 (`input()` y acentos) y espera Enter al terminar.
+  Unos 13 MB.
+- `pnpm lanzador` lo compila y copia a `apps/alumno-web/public/lanzador/`; el workflow de Pages
+  lo compila en Windows, lo prueba y lo publica con el sitio (y en el Release). CI prueba el
+  lanzador en Windows.
+- Límites: solo Windows 10/11 x64, solo biblioteca estándar (sin `pip` ni `tkinter`), sin firma
+  (SmartScreen, posibles avisos de antivirus).
+
 ## [0.3.0] — sin publicar
 
 Versión solo web: una app (PWA) para alumnos y profesor, con Firebase (Auth + Firestore, plan

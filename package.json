@@ -5,6 +5,7 @@
   "scripts": {
     "curso": "node scripts/compilar-curso.mjs",
     "pyodide": "node scripts/copiar-pyodide.mjs",
+    "lanzador": "node scripts/lanzador.mjs",
     "preparar": "pnpm curso && pnpm pyodide",
     "dev:alumno-web": "pnpm preparar && pnpm --filter @rlp/alumno-web dev",
     "build": "pnpm preparar && pnpm -r --filter ./apps/* build",

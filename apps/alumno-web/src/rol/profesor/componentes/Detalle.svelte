@@ -258,7 +258,7 @@
     {:else}
       {@const g = a.global}
       <section class="tarjetas">
-        {#each [["Tiempo de práctica", minutos(g.tiempo_ms)], ["Ejecuciones", g.ejecuciones], ["Con error", g.errores], ["Pruebas", g.pruebas], ["Pistas", g.pistas], ["Teclas", g.teclas], ["Copias", g.copias], ["Intentos de pegar", g.pegados_intentos], ["Pegados permitidos", g.pegados_permitidos], ["Inserciones sospechosas", g.inserciones_sospechosas], ["Salidas de ventana", g.salidas], ["Tiempo fuera", minutos(g.tiempo_fuera_ms)]] as [t, v] (t)}
+        {#each [["Tiempo de práctica", minutos(g.tiempo_ms)], ["Ejecuciones", g.ejecuciones], ["Con error", g.errores], ["Pruebas", g.pruebas], ["Pistas", g.pistas], ["Programas .exe", g.ejecutables ?? 0], ["Teclas", g.teclas], ["Copias", g.copias], ["Intentos de pegar", g.pegados_intentos], ["Pegados permitidos", g.pegados_permitidos], ["Inserciones sospechosas", g.inserciones_sospechosas], ["Salidas de ventana", g.salidas], ["Tiempo fuera", minutos(g.tiempo_fuera_ms)]] as [t, v] (t)}
           <div class="tarjeta dato"><span class="valor">{v}</span><span class="suave">{t}</span></div>
         {/each}
       </section>

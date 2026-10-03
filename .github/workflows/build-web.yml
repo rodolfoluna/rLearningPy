@@ -4,6 +4,8 @@ name: Publicar la app web
 # de los secretos VITE_FIREBASE_* y la publica en GitHub Pages.
 #  - En cada push a main (y a mano desde la pestaña Actions): compila y publica.
 #  - En las etiquetas v*: además agrega el sitio en .zip al Release.
+#  - Antes compila en Windows el lanzador de "Crear programa .exe" (lanzador/, Rust, con Python
+#    embebido) y lo publica junto al sitio en lanzador/rlp-lanzador.exe (+ lanzador.json).
 #
 # Requisitos (ver docs/INSTALACION.md):
 #  - Secretos del repositorio: VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN,
@@ -24,8 +26,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  lanzador:
+    name: Compilar el lanzador de Windows
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Caché de Cargo y del Python embebido
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            lanzador/target
+            lanzador/python
+          key: lanzador-${{ hashFiles('lanzador/Cargo.lock', 'lanzador/python.json') }}
+      - name: Pruebas del lanzador
+        shell: bash
+        run: |
+          node scripts/lanzador.mjs --solo-python
+          cd lanzador && cargo test --release --locked
+      - name: Compilar y probar el lanzador
+        run: node scripts/lanzador.mjs --probar --salida dist-lanzador
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rlp-lanzador
+          path: dist-lanzador/
+
   web:
     name: Compilar el sitio
+    needs: lanzador
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -62,13 +95,21 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm preparar
+      - name: Lanzador de Windows (para "Crear programa .exe")
+        uses: actions/download-artifact@v4
+        with:
+          name: rlp-lanzador
+          path: apps/alumno-web/public/lanzador
       - run: pnpm --filter @rlp/alumno-web build
+      - name: Revisar que el lanzador quedó en el sitio
+        run: test -s apps/alumno-web/dist/lanzador/rlp-lanzador.exe && cat apps/alumno-web/dist/lanzador/lanzador.json
       - name: Empaquetar el sitio
         run: |
           version="${GITHUB_REF_NAME#v}"
           [ "$GITHUB_REF_TYPE" = "tag" ] || version="$(node -p 'require("./apps/alumno-web/package.json").version')-${GITHUB_SHA::7}"
           mkdir -p dist-web
           (cd apps/alumno-web/dist && zip -qr "$GITHUB_WORKSPACE/dist-web/RLP-web-$version.zip" .)
+          cp apps/alumno-web/dist/lanzador/rlp-lanzador.exe dist-web/
       - uses: actions/upload-artifact@v4
         with:
           name: rlp-web
@@ -80,7 +121,9 @@ jobs:
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist-web/*.zip
+          files: |
+            dist-web/*.zip
+            dist-web/rlp-lanzador.exe
           prerelease: ${{ contains(github.ref_name, '-') }}
 
   pages:

@@ -3,6 +3,9 @@
 //
 // - Guarda la app y Pyodide para usarla sin conexión (Pyodide en una caché aparte, que se conserva
 //   entre versiones de la app mientras Pyodide no cambie).
+// - El lanzador de Windows (lanzador/, ~13 MB, para "Crear programa .exe") no se precarga ni pasa
+//   por aquí: la página lo descarga cuando hace falta y lo guarda en su propia caché
+//   ("rlp-lanzador"), que se conserva entre versiones.
 // - Agrega COOP/COEP a cada respuesta: la página queda aislada (SharedArrayBuffer, que necesita
 //   input()) aunque el hosting no permita encabezados, como GitHub Pages.
 // - La primera instalación se activa sola; una versión nueva espera a que la página la active
@@ -13,6 +16,7 @@ const CACHE_APP = `rlp-app-${VERSION}`;
 const CACHE_PYODIDE = "rlp-pyodide-__VERSION_PYODIDE__";
 const ARCHIVOS_APP = __ARCHIVOS_APP__;
 const ARCHIVOS_PYODIDE = __ARCHIVOS_PYODIDE__;
+const CACHE_LANZADOR = "rlp-lanzador";
 
 self.addEventListener("install", (evento) => {
   evento.waitUntil(
@@ -28,7 +32,7 @@ self.addEventListener("activate", (evento) => {
   evento.waitUntil(
     (async () => {
       for (const nombre of await caches.keys()) {
-        if (nombre.startsWith("rlp-") && nombre !== CACHE_APP && nombre !== CACHE_PYODIDE) await caches.delete(nombre);
+        if (nombre.startsWith("rlp-") && nombre !== CACHE_APP && nombre !== CACHE_PYODIDE && nombre !== CACHE_LANZADOR) await caches.delete(nombre);
       }
       await self.clients.claim();
     })(),
@@ -73,6 +77,8 @@ self.addEventListener("fetch", (evento) => {
   const pedido = evento.request;
   const url = new URL(pedido.url);
   if (pedido.method !== "GET" || url.origin !== location.origin) return;
+  // El lanzador lo administra la página (ver arriba): directo a la red, sin copiar el binario.
+  if (url.pathname.includes("/lanzador/")) return;
   evento.respondWith(
     (async () => {
       let respuesta = await caches.match(pedido, { ignoreSearch: true });

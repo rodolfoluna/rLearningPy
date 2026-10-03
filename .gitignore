@@ -50,3 +50,8 @@ Thumbs.db
 firestore-debug.log
 firebase-debug.log
 ui-debug.log
+
+# Lanzador de Windows (Rust): compilado y Python embebido (se descarga con `pnpm lanzador`)
+lanzador/target/
+lanzador/python/
+apps/*/public/lanzador/

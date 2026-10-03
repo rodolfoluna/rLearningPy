@@ -32,8 +32,11 @@ function serviceWorker(): Plugin {
         .map((r) => relative(dist, r).split(sep).join("/"))
         .filter((r) => r !== "sw.js")
         .sort();
-      // El área del profesor no se guarda por adelantado: los alumnos no la necesitan.
-      const app = archivos.filter((r) => !r.startsWith("pyodide/") && !r.startsWith("assets/area-profesor-"));
+      // El área del profesor no se guarda por adelantado: los alumnos no la necesitan. El lanzador
+      // de Windows (~13 MB) tampoco: la página lo descarga y guarda solo si se crea un .exe.
+      const app = archivos.filter(
+        (r) => !r.startsWith("pyodide/") && !r.startsWith("assets/area-profesor-") && !r.startsWith("lanzador/"),
+      );
       const pyodide = archivos.filter((r) => r.startsWith("pyodide/"));
       const huella = createHash("sha256");
       for (const r of app) huella.update(r).update(readFileSync(join(dist, r)));

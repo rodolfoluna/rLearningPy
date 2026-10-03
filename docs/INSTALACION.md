@@ -180,11 +180,33 @@ día pueden acercarse al límite de escrituras.
 - **El workflow falla en "Revisar la configuración de Firebase"**: faltan los secretos del paso 6.
 - **La página publicada sale en blanco o sin estilos**: revisa la variable `RLP_BASE` (debe
   coincidir con la ruta de la dirección y terminar en `/`).
+- **"El lanzador de programas no está disponible en este sitio"** al crear un `.exe`: el sitio
+  se publicó sin `lanzador/rlp-lanzador.exe` (ver [Programas .exe](#programas-exe-lanzador-de-windows)).
 - **El enlace "Configurar la app por primera vez" no aparece**: ya hay un profesor configurado
   (documento `config/app` en Firestore). Si fue un error, bórralo desde la consola de Firestore y
   recarga la app.
 
-## Pendiente (fase 2)
+## Programas `.exe` (lanzador de Windows)
 
-Generar un **programa `.exe`** con el código del alumno desde el navegador aún no está
-disponible.
+El botón **Crear programa .exe** necesita el lanzador `lanzador/rlp-lanzador.exe`. **No tienes
+que hacer nada**: el workflow **Publicar la app web** lo compila en un runner de Windows (job
+"Compilar el lanzador de Windows", unos minutos la primera vez) y lo publica junto con la app.
+En las etiquetas `v*` también se agrega al Release.
+
+Si publicas la app de otra forma (por ejemplo con `pnpm build` en tu computadora), compílalo antes
+con `pnpm lanzador` (requiere [Rust](https://rustup.rs); en Windows con las herramientas de
+compilación de Visual Studio, o en Linux/macOS con `rustup target add x86_64-pc-windows-gnu` y
+mingw-w64). Sin el lanzador, el botón avisa que no está disponible y el resto de la app funciona
+igual.
+
+El lanzador incluye el Python "embeddable" oficial de python.org con versión y SHA-256 fijos
+(`lanzador/python.json`). Límites:
+
+- Solo **Windows 10 u 11 de 64 bits** (x64). Se puede descargar desde cualquier equipo
+  (Chromebook, Android, Mac), pero solo se abre en Windows.
+- Solo la **biblioteca estándar** de Python: sin paquetes de `pip`. Tampoco trae `tkinter` ni
+  `turtle` (el Python "embeddable" de Windows no los incluye).
+- **No está firmado**: Windows SmartScreen muestra "Windows protegió tu PC"; hay que elegir
+  **Más información → Ejecutar de todas formas**. Algunos antivirus pueden marcarlo por error.
+- La primera vez que se abre en una computadora extrae Python (unos 25 MB) a
+  `%LOCALAPPDATA%\RealLearningProgramming\`; las siguientes veces abre al instante.

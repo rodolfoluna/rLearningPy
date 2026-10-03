@@ -10,6 +10,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lanzador:
+    name: Lanzador de Windows (Rust)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            lanzador/target
+            lanzador/python
+          key: lanzador-${{ hashFiles('lanzador/Cargo.lock', 'lanzador/python.json') }}
+      - name: Pruebas (formato del remolque) y prueba real del .exe
+        shell: bash
+        run: |
+          node scripts/lanzador.mjs --solo-python
+          (cd lanzador && cargo test --release --locked)
+          node scripts/lanzador.mjs --probar --salida dist-lanzador
+
   pruebas:
     name: Pruebas (Linux)
     runs-on: ubuntu-24.04
