@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruebas:
+    name: Pruebas (Linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Compilar el curso y copiar Pyodide
+        run: pnpm preparar
+      - name: Pruebas del arnés de Python
+        run: python3 -m unittest discover packages/python-worker/pruebas
+      - name: Validar el curso (CPython)
+        run: python3 scripts/validar_curso.py
+      - name: Validar el curso (Pyodide)
+        run: node scripts/validar-curso-pyodide.mjs
+      - name: Pruebas unitarias (TypeScript)
+        run: pnpm vitest run
+      - name: Revisión de tipos (Svelte y TypeScript)
+        run: |
+          pnpm --filter @rlp/alumno-web check
+          pnpm --filter @rlp/profesor check
+      - name: Sitio web (PWA) compilado, para probarlo sin conexión
+        run: pnpm --filter @rlp/alumno-web build
+      - name: Pruebas de interfaz (Playwright; la versión web también en WebKit)
+        env:
+          PLAYWRIGHT_WEBKIT: "1"
+        run: |
+          pnpm exec playwright install --with-deps chromium webkit
+          pnpm exec playwright test
+      - name: Capturas de pantalla
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas
+          path: |
+            tests/e2e/capturas/
+            test-results/
+          if-no-files-found: ignore

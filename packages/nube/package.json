@@ -1,0 +1,13 @@
+{
+  "name": "@rlp/nube",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cliente Firebase compartido (Auth + Firestore con caché sin conexión) para las apps de alumno y profesor.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "firebase": "^12.3.0"
+  }
+}
