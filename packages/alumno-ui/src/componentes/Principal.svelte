@@ -48,12 +48,40 @@
   function ir(sel: typeof app.seleccion) {
     app.seleccion = sel;
     temarioAbierto = false;
+    menuAbierto = false;
+  }
+
+  function abrirClave() {
+    menuAbierto = false;
+    temarioAbierto = false;
+    modalClave = true;
+  }
+
+  // Menús: se cierran con Escape o al tocar fuera.
+  let cuenta: HTMLDivElement | undefined = $state();
+  let lateral: HTMLElement | undefined = $state();
+  let botonLateral: HTMLButtonElement | undefined = $state();
+  function teclaGlobal(e: KeyboardEvent) {
+    if (e.key !== "Escape") return;
+    if (temarioAbierto) {
+      temarioAbierto = false;
+      botonLateral?.focus();
+    }
+    menuAbierto = false;
+  }
+  function clicGlobal(e: PointerEvent) {
+    const t = e.target as Node;
+    if (menuAbierto && cuenta && !cuenta.contains(t)) menuAbierto = false;
+    if (temarioAbierto && lateral && !lateral.contains(t) && !botonLateral?.contains(t)) temarioAbierto = false;
   }
 </script>
 
+<svelte:window onkeydown={teclaGlobal} onpointerdown={clicGlobal} />
+
 <div class="principal">
   <header class="barra">
-    <button class="fantasma solo-movil" aria-label="Temario" onclick={() => (temarioAbierto = !temarioAbierto)}>☰</button>
+    <button class="fantasma solo-movil hamburguesa" aria-label="Menú" aria-controls="panel-lateral" aria-expanded={temarioAbierto}
+      bind:this={botonLateral} onclick={() => (temarioAbierto = !temarioAbierto)}>☰</button>
     <button class="fantasma marca" onclick={() => ir({ tipo: "inicio" })}>
       <span aria-hidden="true">🐍</span> <span class="titulo">{curso.titulo}</span>
     </button>
@@ -64,8 +92,8 @@
       <span class="insignia" class:alerta={g.pegados_intentos > 0} data-contador="pegados">🚫 Intentos de pegar <strong>{g.pegados_intentos}</strong></span>
       <span class="insignia" data-contador="salidas">↗ Salidas <strong>{g.salidas}</strong></span>
     </button>
-    <div class="cuenta">
-      <button class="fantasma" onclick={() => (menuAbierto = !menuAbierto)} aria-expanded={menuAbierto}>
+    <div class="cuenta" bind:this={cuenta}>
+      <button class="fantasma" aria-label="Cuenta" aria-haspopup="menu" onclick={() => (menuAbierto = !menuAbierto)} aria-expanded={menuAbierto}>
         <span class="avatar">{alumno.perfil.nombre.slice(0, 1).toUpperCase()}</span>
         <span class="nombre">{alumno.perfil.nombre}</span> ▾
       </button>
@@ -73,7 +101,7 @@
         <div class="menu" role="menu">
           <div class="suave quien">{alumno.perfil.numero_control}{alumno.grupo ? ` · ${alumno.grupo.nombre}` : " · sin grupo"}</div>
           <button role="menuitem" onclick={() => { menuAbierto = false; ir({ tipo: "estadisticas" }); }}>📊 Mis estadísticas</button>
-          <button role="menuitem" onclick={() => { menuAbierto = false; modalClave = true; }}>🔑 Cambiar contraseña</button>
+          <button role="menuitem" onclick={abrirClave}>🔑 Cambiar contraseña</button>
           <button role="menuitem" onclick={() => aplicarTema(app.tema === "oscuro" ? "claro" : "oscuro")}>
             🌓 Tema {app.tema === "oscuro" ? "claro" : "oscuro"}
           </button>
@@ -84,7 +112,28 @@
   </header>
 
   <div class="cuerpo">
-    <aside class="lateral" class:abierto={temarioAbierto}>
+    <aside class="lateral" class:abierto={temarioAbierto} id="panel-lateral" bind:this={lateral}>
+      <!-- En celulares la barra superior no cabe: la cuenta y los contadores viven aquí. -->
+      <section class="cuenta-movil" aria-label="Tu cuenta">
+        <div class="quien-movil">
+          <span class="avatar">{alumno.perfil.nombre.slice(0, 1).toUpperCase()}</span>
+          <span>
+            <strong>{alumno.perfil.nombre}</strong><br />
+            <span class="suave">{alumno.perfil.numero_control}{alumno.grupo ? ` · ${alumno.grupo.nombre}` : " · sin grupo"}</span>
+          </span>
+        </div>
+        <button class="fantasma contadores-movil" onclick={() => ir({ tipo: "estadisticas" })}>
+          <span class="insignia">📋 <strong>{g.copias}</strong></span>
+          <span class="insignia" class:alerta={g.pegados_intentos > 0}>🚫 <strong>{g.pegados_intentos}</strong></span>
+          <span class="insignia">↗ <strong>{g.salidas}</strong></span>
+          <span class="suave">Mis estadísticas</span>
+        </button>
+        <button class="fantasma" onclick={abrirClave}>🔑 Cambiar contraseña</button>
+        <button class="fantasma" onclick={() => aplicarTema(app.tema === "oscuro" ? "claro" : "oscuro")}>
+          🌓 Tema {app.tema === "oscuro" ? "claro" : "oscuro"}
+        </button>
+        <button class="fantasma" onclick={salir}>🚪 Cerrar sesión</button>
+      </section>
       <Temario {ir} />
     </aside>
     <main class="contenido">
@@ -200,7 +249,8 @@
     min-width: 0;
     overflow: auto;
   }
-  .solo-movil {
+  .solo-movil,
+  .cuenta-movil {
     display: none;
   }
   @media (max-width: 1100px) {
@@ -222,12 +272,63 @@
       bottom: 0;
       left: 0;
       z-index: 40;
+      max-width: 88vw;
       transform: translateX(-100%);
-      transition: transform 0.2s;
+      visibility: hidden;
+      transition: transform 0.2s, visibility 0.2s;
       box-shadow: 0 0 30px rgb(0 0 0 / 0.25);
     }
     .lateral.abierto {
       transform: none;
+      visibility: visible;
+    }
+  }
+  /* Celulares: en la barra solo quedan el menú, la marca y el estado de sincronización. */
+  @media (max-width: 600px) {
+    .barra {
+      gap: 0.25rem;
+      padding: 0.4rem 0.5rem;
+    }
+    .marca {
+      min-width: 0;
+      flex: 0 1 auto;
+      overflow: hidden;
+    }
+    .titulo {
+      display: inline;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .contadores,
+    .cuenta {
+      display: none;
+    }
+    .hamburguesa {
+      font-size: 1.25rem;
+    }
+    .cuenta-movil {
+      display: flex;
+      flex-direction: column;
+      padding: 0.6rem;
+      border-bottom: 1px solid var(--borde);
+      gap: 0.15rem;
+    }
+    .cuenta-movil > button {
+      justify-content: flex-start;
+      text-align: left;
+    }
+    .quien-movil {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+      padding: 0.2rem 0.6rem 0.5rem;
+      font-size: 0.92em;
+      line-height: 1.3;
+    }
+    .contadores-movil {
+      flex-wrap: wrap;
+      gap: 0.35rem;
     }
   }
 </style>

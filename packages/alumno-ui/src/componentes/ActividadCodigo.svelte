@@ -33,7 +33,9 @@
   let corriendo = $state(false);
   let probando = $state(false);
   let pestana: "consola" | "pruebas" = $state("consola");
-  let panelMovil: "enunciado" | "codigo" | "salida" = $state("codigo");
+  // En celulares se ve un panel a la vez; al abrir una actividad se empieza por el enunciado.
+  let panelMovil: "enunciado" | "codigo" | "salida" = $state("enunciado");
+  const PANELES = [["enunciado", "Enunciado"], ["codigo", "Código"], ["salida", "Consola y pruebas"]] as const;
   let resultado: ResultadoPruebas | null = $state(null);
   let enCurso: ResultadoPrueba[] = $state([]);
   let fuente = $state(Number(leer("rlp-fuente") ?? 15));
@@ -321,11 +323,12 @@
 </script>
 
 <div class="espacio" data-panel={panelMovil}>
-  <nav class="pestanas-movil" aria-label="Paneles">
-    <button class:activa={panelMovil === "enunciado"} onclick={() => (panelMovil = "enunciado")}>Enunciado</button>
-    <button class:activa={panelMovil === "codigo"} onclick={() => (panelMovil = "codigo")}>Código</button>
-    <button class:activa={panelMovil === "salida"} onclick={() => (panelMovil = "salida")}>Consola y pruebas</button>
-  </nav>
+  <div class="pestanas-movil" role="tablist" aria-label="Paneles" data-pestanas-movil>
+    {#each PANELES as [valor, texto] (valor)}
+      <button role="tab" aria-selected={panelMovil === valor} class:activa={panelMovil === valor}
+        onclick={() => (panelMovil = valor)}>{texto}</button>
+    {/each}
+  </div>
 
   <section class="enunciado">
     <Markdown
@@ -555,7 +558,13 @@
       background: var(--superficie);
     }
     .pestanas-movil button {
-      flex: 1;
+      flex: 1 1 0;
+      min-width: 0;
+      justify-content: center;
+      text-align: center;
+      white-space: normal;
+      line-height: 1.2;
+      padding: 0.55em 0.3em;
       border: none;
       border-radius: 0;
       border-bottom: 3px solid transparent;
