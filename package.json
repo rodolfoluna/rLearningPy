@@ -7,14 +7,15 @@
     "pyodide": "node scripts/copiar-pyodide.mjs",
     "preparar": "pnpm curso && pnpm pyodide",
     "dev:alumno-web": "pnpm preparar && pnpm --filter @rlp/alumno-web dev",
-    "dev:profesor": "pnpm preparar && pnpm --filter @rlp/profesor dev",
     "build": "pnpm preparar && pnpm -r --filter ./apps/* build",
     "check": "pnpm -r check",
     "test": "vitest run",
     "e2e": "playwright test",
     "test:reglas": "firebase emulators:exec --only auth,firestore --project demo-rlp \"vitest run --config tests/reglas/vitest.config.ts\"",
     "emuladores": "firebase emulators:start --only auth,firestore --project demo-rlp",
-    "e2e:emuladores": "pnpm --filter @rlp/alumno-web build:emulador && firebase emulators:exec --only auth,firestore --project demo-rlp \"playwright test web.pwa web.flujo\""
+    "e2e:emuladores": "pnpm --filter @rlp/alumno-web build:emulador && firebase emulators:exec --only auth,firestore --project demo-rlp \"playwright test web.pwa web.flujo web.profesor web.nube\"",
+    "desplegar:reglas": "firebase deploy --only firestore:rules,firestore:indexes",
+    "dev": "pnpm preparar && pnpm --filter @rlp/alumno-web dev"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",

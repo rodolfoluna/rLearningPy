@@ -4,10 +4,13 @@
 // se escribe con setDoc(..., {merge: true}) sin `await` (Firestore lo guarda en IndexedDB y lo
 // envía solo al volver la red) y el indicador de sincronización sigue `waitForPendingWrites`.
 //
-// Para ahorrar escrituras (plan Spark: 20 000/día):
-//  - las operaciones del editor (`ediciones`) y el código se agrupan y se escriben cada ~10 s,
-//    o antes al salir de la ventana, cambiar de actividad, probar o cerrar;
-//  - los contadores se suman en memoria y se escriben con `increment()` cada ~15 s.
+// Para ahorrar escrituras (plan Spark: 20 000/día; 35 alumnos tecleando durante una clase de 2 h
+// escriben hasta unas 12 000 veces con estos intervalos):
+//  - las operaciones del editor (`ediciones`) y el código se agrupan y se escriben cada ~30 s,
+//    o antes al salir de la ventana, cambiar de actividad, probar, volver la red o cerrar;
+//  - los contadores se suman en memoria y se escriben con `increment()` cada ~60 s, junto con el
+//    resumen de avance (`avance`) que lee el tablero del profesor (así el tablero lee un documento
+//    por alumno, no uno por actividad).
 
 import {
   auth,
@@ -20,6 +23,7 @@ import {
   hayProfesor,
   iniciarSesion as iniciarSesionNube,
   POLITICAS_POR_DEFECTO,
+  resumenAvance,
   rolDeUsuario,
   rutas,
   sesionGuardada,
@@ -60,14 +64,14 @@ import {
   type QuerySnapshot,
 } from "firebase/firestore";
 
-export const INTERVALO_EDICIONES_MS = 10_000;
-export const INTERVALO_CONTADORES_MS = 15_000;
+export const INTERVALO_EDICIONES_MS = 30_000;
+export const INTERVALO_CONTADORES_MS = 60_000;
 /** Pasado este tamaño (caracteres) ya no se agregan ediciones: el documento no debe pasar de 1 MB. */
 const LIMITE_EDICIONES = 700_000;
 /** Cuánto esperar al servidor en una lectura antes de usar la caché. */
 const ESPERA_LECTURA_MS = 4000;
-/** `ultimaSync` se escribe a lo más una vez por minuto. */
-const INTERVALO_ULTIMA_SYNC_MS = 60_000;
+/** `ultimaSync` se escribe a lo más cada 5 minutos (el tablero usa también `contadores.actualizado`). */
+const INTERVALO_ULTIMA_SYNC_MS = 5 * 60_000;
 
 const contadoresVacios = contadoresNube as () => Contadores;
 
@@ -140,6 +144,8 @@ class SesionAlumno {
   private conBase = new Set<string>();
   private delta: { global: Delta; por_actividad: Record<string, Delta> } = { global: {}, por_actividad: {} };
   private hayDelta = false;
+  /** Actividades cuyo resumen (`contadores.avance`) hay que escribir. */
+  private avancePendiente = new Set<string>();
   private tEdiciones: ReturnType<typeof setTimeout> | null = null;
   private tContadores: ReturnType<typeof setTimeout> | null = null;
   private cronometro = new progreso.Cronometro();
@@ -179,6 +185,10 @@ class SesionAlumno {
       const datos = d.data() as Partial<DocActividad>;
       this.actividades[d.id] = aEstado(datos);
       this.tamanos.set(d.id, tamEdiciones(datos));
+    }
+    // Resumen para el tablero: si falta o no coincide con alguna actividad, se reescribe.
+    for (const [id, e] of Object.entries(this.actividades)) {
+      if (JSON.stringify(cont?.avance?.[id]) !== JSON.stringify(resumenAvance(e))) this.avancePendiente.add(id);
     }
     if (cont) {
       this.estadisticas = {
@@ -255,12 +265,14 @@ class SesionAlumno {
   // ------------------------------------------------------------ actividades
 
   abrir(id: string, codigoInicial: string): EstadoActividad {
+    this.vaciar(); // lo agrupado de la actividad anterior pasa a la cola de Firestore
     const previo = this.actividades[id];
     const e = progreso.abrirActividad(previo, codigoInicial);
     this.actividades[id] = e;
     if (!previo) {
       const { nota: _nota, ...inicial } = e;
       this.escribir(this.ref(id), inicial);
+      this.marcarAvance(id);
     }
     this.evento("actividad_abierta", id, {});
     return { ...e };
@@ -341,7 +353,9 @@ class SesionAlumno {
       actualizado: e.actualizado,
       ...(e.completada && !antes.completada ? { completada: true, puntos: e.puntos } : {}),
     });
+    this.marcarAvance(id);
     this.evento("prueba", id, { pasadas, total });
+    if (e.completada && !antes.completada) this.vaciarContadores(); // el profesor la ve completada al momento
     return { ...e };
   }
 
@@ -355,7 +369,9 @@ class SesionAlumno {
       actualizado: e.actualizado,
       ...(e.completada && !antes.completada ? { completada: true, puntos: e.puntos } : {}),
     });
+    this.marcarAvance(id);
     this.evento("respuesta", id, { correcta });
+    if (e.completada && !antes.completada) this.vaciarContadores();
     return { ...e };
   }
 
@@ -369,6 +385,16 @@ class SesionAlumno {
   }
 
   // ------------------------------------------------------------ contadores
+
+  /** El resumen de la actividad se escribirá con los siguientes contadores. */
+  private marcarAvance(id: string) {
+    this.avancePendiente.add(id);
+    this.programarContadores();
+  }
+
+  private programarContadores() {
+    if (!this.tContadores) this.tContadores = setTimeout(() => this.vaciarContadores(), INTERVALO_CONTADORES_MS);
+  }
 
   evento(tipo: string, actividad: string | null, datos: Record<string, unknown>) {
     const nuevo = contadoresVacios();
@@ -394,29 +420,38 @@ class SesionAlumno {
       sumar((this.delta.por_actividad[a] ??= {}), { tiempo_ms: ms });
     }
     this.hayDelta = true;
-    this.nucleo.recalcular();
-    if (!this.tContadores) this.tContadores = setTimeout(() => this.vaciarContadores(), INTERVALO_CONTADORES_MS);
+    this.programarContadores();
   }
 
   vaciarContadores() {
     if (this.tContadores) clearTimeout(this.tContadores);
     this.tContadores = null;
-    if (!this.hayDelta) return;
+    if (!this.hayDelta && !this.avancePendiente.size) return;
     const inc = (d: Delta) => Object.fromEntries(Object.entries(d).map(([k, v]) => [k, increment(v as number)]));
     const datos: DocumentData = {
       global: inc(this.delta.global),
       por_actividad: Object.fromEntries(Object.entries(this.delta.por_actividad).map(([k, d]) => [k, inc(d)])),
       actualizado: Date.now(),
     };
+    if (this.avancePendiente.size) {
+      datos.avance = Object.fromEntries(
+        [...this.avancePendiente].filter((id) => this.actividades[id]).map((id) => [id, resumenAvance(this.actividades[id])]),
+      );
+    }
     this.delta = { global: {}, por_actividad: {} };
     this.hayDelta = false;
+    this.avancePendiente.clear();
     this.escribir(doc(db(), rutas.contadores(this.alumnoId)), datos);
     this.nucleo.recalcular();
   }
 
-  /** ¿Hay cambios agrupándose en memoria (aún no en la cola de Firestore)? */
+  /**
+   * ¿Hay cambios agrupándose en memoria (aún no en la cola de Firestore)? Solo cuenta el código:
+   * los contadores y el resumen se envían cada minuto (o al completar una actividad) y no deben
+   * dejar el indicador en "Sincronizando".
+   */
   pendiente(): boolean {
-    return this.ediciones.size > 0 || this.hayDelta;
+    return this.ediciones.size > 0;
   }
 
   vaciar() {
@@ -442,7 +477,10 @@ class NucleoFirebase {
   private ultimaSyncEscrita = 0;
 
   constructor() {
-    addEventListener("online", () => this.recalcular());
+    addEventListener("online", () => {
+      this.sesion?.vaciar(); // al volver la red se envía todo lo agrupado
+      this.recalcular();
+    });
     addEventListener("offline", () => this.recalcular());
     // Al ocultar o cerrar la página, lo agrupado pasa a la cola persistente de Firestore.
     addEventListener("pagehide", () => this.sesion?.vaciar());

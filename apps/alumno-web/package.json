@@ -1,9 +1,9 @@
 {
   "name": "@rlp/alumno-web",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "App web única (PWA): acceso común; área del alumno (@rlp/alumno-ui) con progreso sincronizado en Firebase y sin conexión, y área del profesor.",
+  "description": "App web única (PWA): acceso común; área del alumno (@rlp/alumno-ui) con progreso sincronizado en Firebase y sin conexión, y área del profesor (src/rol/profesor).",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -13,7 +13,11 @@
   },
   "dependencies": {
     "@rlp/alumno-ui": "workspace:*",
+    "@rlp/curso": "workspace:*",
+    "@rlp/editor": "workspace:*",
     "@rlp/nube": "workspace:*",
+    "@rlp/python-worker": "workspace:*",
+    "@rlp/ui-comun": "workspace:*",
     "firebase": "^12.3.0"
   },
   "devDependencies": {

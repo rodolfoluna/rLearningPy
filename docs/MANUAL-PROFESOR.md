@@ -1,239 +1,148 @@
-# Manual del profesor: llaves, claves de firma y publicación
+# Manual del profesor
 
-LP usa dos tipos de llaves, y conviene no confundirlas:
+La app tiene una sola dirección para todos. Tú entras con tu **correo** y tu contraseña en la
+misma pantalla que tus alumnos; la app te lleva al área del profesor. Si aún no configuras la app,
+sigue la [guía de instalación](INSTALACION.md).
 
-| | Para qué sirve | Quién la tiene | Dónde se configura |
-|---|---|---|---|
-| **Tus llaves de profesor** | Abrir las entregas de tus alumnos y firmar tus grupos, retroalimentaciones y archivos de acceso | Solo tú (y tus coprofesores, con las suyas) | En LP Profesor ([sección 1](#1-tus-llaves-de-profesor)) |
-| **Llaves de firma de LP Alumno** | Que LP Profesor reconozca que una entrega salió de una versión oficial de la app (el semáforo) | Quien publica las versiones: la nativa en su gestor de contraseñas, la web como secreto de GitHub | En tu PC y en GitHub ([sección 2](#2-llaves-de-firma-de-lp-alumno)) |
+Arriba están las tres secciones (**📊 Tablero**, **🎓 Alumnos**, **👥 Grupos**), el selector de
+**Grupo** (filtra el tablero, la lista de alumnos y las exportaciones) y **Cerrar sesión**.
 
-Para instalar las apps en un laboratorio, ver [`INSTALACION.md`](INSTALACION.md). Para publicar una
-versión, la [sección 4](#4-publicar-una-versión).
+## 1. Grupos
 
----
+**👥 Grupos → ＋ Nuevo grupo**:
 
-## 1. Tus llaves de profesor
+- **Nombre** del grupo.
+- **Pegar en el editor**:
+  - **Bloquear siempre** (recomendado): no se puede pegar nada en el editor, en la consola ni en
+    las respuestas.
+  - **Permitir solo lo copiado dentro de la app**: el alumno puede pegar lo que él mismo copió de
+    su código; pegar desde fuera sigue bloqueado. Cada pegado se cuenta.
+- **Contar las salidas de la ventana**: registra cuántas veces y cuánto tiempo el alumno salió
+  de la app.
 
-### Crearlas (una sola vez)
-1. Abre **LP Profesor** → **Crear mis llaves de profesor**.
-2. Escribe **tu nombre** (lo verán tus alumnos) y una **contraseña de al menos 10 caracteres**.
-3. Al terminar aparece **Guarda un respaldo de tus llaves**: toca **💾 Guardar respaldo…** y
-   guarda el archivo `.rlpk` en una memoria USB **y** en tu nube. Está protegido con la misma
-   contraseña.
+Los cambios llegan a los alumnos al momento (o cuando recuperen la conexión). **✏ Editar** cambia
+el nombre o las políticas; **🗑 Borrar** deja a sus alumnos sin grupo (con el pegado bloqueado),
+sin borrar su avance.
 
-> **Si pierdes tus llaves** (se daña la computadora, formateas o borras la carpeta) **no podrás
-> abrir las entregas** de tus alumnos. Nadie puede recuperarlas por ti: el respaldo `.rlpk` es la
-> única copia.
+## 2. Alumnos
 
-Las llaves quedan cifradas en la carpeta `datos_profesor`, junto a `LP Profesor.exe`. Copiar esa
-carpeta también sirve de respaldo (con tu base de entregas).
+### Dar de alta
 
-### Usarlas en otra computadora
-Abre LP Profesor ahí → **Ya tengo un respaldo** (o **Restaurar desde un respaldo**) →
-**Elegir respaldo…** → tu `.rlpk` → la contraseña con la que lo guardaste → **Restaurar**.
+En **🎓 Alumnos → Agregar alumnos** elige el **grupo** y:
 
-### Cada día
-LP Profesor pide **Contraseña de tus llaves** → **Desbloquear**. Al terminar, **🔒 Bloquear**.
+- **Uno por uno**: número de control y nombre completo → **Crear alumno**.
+- **Varios a la vez**: abre "Varios a la vez" y pega la lista, una línea por alumno:
 
-### Coprofesores
-En **Grupos** aparece **tu llave pública**: compártela con otro profesor para que te agregue a sus
-grupos. Al crear un grupo, en **Llaves de coprofesores**, pega las llaves públicas de quienes deben
-poder abrir esas entregas. La llave pública no es secreta; tu contraseña y tu `.rlpk`, sí.
+  ```
+  21340500,Karla Pérez López
+  21340501,Luis Gómez Ruiz
+  ```
 
-### Lo que firmas con tus llaves
-- **Archivo de grupo** (`.rlpg`, o el **📱 QR para celulares**): los alumnos lo importan y la app
-  comprueba que es tuyo.
-- **Retroalimentación** (`.rlpr`): cada alumno solo puede leer la suya.
-- **Archivo de acceso** (`.rlpa`, en el detalle del alumno): para quien perdió su contraseña y su
-  código de recuperación; la app le da una contraseña temporal para entregarle.
+  También sirve con `;` o con tabulador (copiar dos columnas de Excel), y puedes **📄 Subir CSV**.
+  Un encabezado en la primera línea se ignora. La app avisa de líneas con errores (número de
+  control con espacios o símbolos, nombre vacío, repetidos) antes de crear.
 
----
+El número de control solo admite letras, números, `-` y `_`, y es el usuario del alumno: no se
+puede cambiar después (si está mal, da de baja al alumno y créalo de nuevo).
 
-## 2. Llaves de firma de LP Alumno
+### Credenciales
 
-Cada versión de LP Alumno firma las entregas con una llave incluida en la app. LP Profesor revisa
-esa firma en **Firma de la app** (el semáforo):
+Al crear (o restablecer) aparece la tabla de **credenciales** con la contraseña temporal de cada
+alumno, como `gato-4821`:
 
-| Resultado | Qué significa |
-|---|---|
-| 🟢 Verde | Firmada con la llave **de producción** de la app nativa (Windows o Android). |
-| 🟡 Amarillo | Firmada con la llave **de desarrollo** (una compilación de prueba) o con la llave **web**. El código de una página web se puede descargar, así que su firma no prueba nada por sí sola: revisa el historial y la reproducción de la escritura. |
-| 🔴 Rojo | Llave desconocida o archivo modificado fuera de la app. |
+- **⬇ Descargar CSV**: para guardarla o abrirla en Excel.
+- **🖨 Imprimir**: una hoja de tarjetas recortables con nombre, grupo, número de control,
+  contraseña temporal y la dirección de la app.
 
-Hay **dos** llaves de producción. La parte secreta de cada una es su **semilla** (44 caracteres
-terminados en `=`); la parte pública va en `crates/rlp-core/llaves_app.txt`:
+**Las contraseñas temporales no se guardan**: descárgalas o imprímelas antes de cerrar la tabla.
+Al entrar por primera vez, cada alumno debe elegir una contraseña nueva.
 
-| Llave | Para | Dónde vive la semilla | Su línea en `llaves_app.txt` |
-|---|---|---|---|
-| `RLP_CLAVE_APP` | Windows y Android, que se compilan en tu PC | En tu gestor de contraseñas; `publicar-version.ps1` te la pide al publicar | Sin marca: `v0.2.1 (producción, 2026-10)` |
-| `RLP_CLAVE_APP_WEB` | La versión web, que compila GitHub | En el secreto de GitHub `RLP_CLAVE_APP_WEB` | Con la marca `[web]` |
+### Restablecer una contraseña
 
-> **Nunca subas una semilla al repositorio** ni la mandes por chat o correo. Si se pierde no se
-> puede recuperar: hay que crear otra llave (sección 2.3). La llave pública sí se puede
-> compartir.
+Si un alumno olvida su contraseña: **🎓 Alumnos → 🔑 Restablecer contraseña** (o el mismo botón
+en su detalle). Se genera una contraseña temporal nueva, la anterior deja de servir y su avance
+no cambia. Si el alumno tenía la app abierta con la cuenta anterior, debe cerrar sesión y entrar
+con la nueva.
 
-### 2.1 Guardar un secreto en GitHub
-La versión web necesita `RLP_CLAVE_APP_WEB`. `RLP_CLAVE_APP` solo hace falta en GitHub si usas los
-workflows manuales de respaldo (sección 4).
+### Editar y dar de baja
 
-1. En el repositorio: **Settings → Secrets and variables → Actions**.
-2. Pestaña **Secrets** → **New repository secret** (o el lápiz de uno que ya existe, para
-   cambiarlo).
-3. **Name**: `RLP_CLAVE_APP_WEB` (o `RLP_CLAVE_APP`). **Secret**: la semilla, sin espacios.
-4. **Add secret**. GitHub no la vuelve a mostrar: guárdala también en tu gestor de contraseñas.
+- **✏ Editar**: nombre y grupo.
+- **🗑 Dar de baja**: borra al alumno y todo su avance; ya no puede entrar. No se puede deshacer.
 
-### 2.2 Comprobar que una semilla es la correcta
-En tu PC, en PowerShell, dentro de la carpeta del repositorio:
+## 3. Tablero
 
-```powershell
-$env:RLP_CLAVE_APP = "<semilla nativa>"
-cargo run -p rlp-core --example verificar_llave_app          # app nativa
-$env:RLP_CLAVE_APP_WEB = "<semilla web>"
-cargo run -p rlp-core --example verificar_llave_app -- web   # versión web
-```
+Muestra a los alumnos del grupo elegido y **se actualiza solo**:
 
-Debe decir **"Llave de firma de producción reconocida"**. Si dice que la llave pública **no está
-en `llaves_app.txt`**, esa semilla no es la de esta versión (sección 2.3). `publicar-version.ps1` y
-Build Web hacen la misma comprobación antes de publicar. Nunca muestra la semilla.
+- **Resumen**: número de alumnos, cuántos se conectaron en las últimas 24 h, avance promedio, y
+  cuántos están en amarillo y en rojo.
+- Por alumno: grupo, **alerta**, **avance** (actividades completadas de 118 y porcentaje),
+  **puntos**, tiempo de práctica, ejecuciones, intentos de pegar, salidas de la ventana y **última
+  sincronización**. "no ha entrado" indica que aún tiene su contraseña temporal.
+- Haz clic en el título de una columna para **ordenar** (otra vez para invertir).
+- **Ver mapa de actividades**: una celda por actividad (verde: completada; color: empezada).
+- **Buscar** por nombre o número de control.
 
-### 2.3 Crear o cambiar una llave
-Si se perdió una semilla o se filtró la nativa:
+El avance llega cuando el alumno termina una actividad (al momento si tiene red) y los contadores
+cada minuto mientras trabaja. Un alumno que trabajó sin conexión aparece al día en cuanto su
+equipo recupera la red y abre la app.
 
-1. En tu PC: `cargo run -p rlp-core --example generar_llave_app`. Muestra una **semilla** y una
-   **llave pública**.
-2. Guarda la semilla en tu gestor de contraseñas (y en el secreto de GitHub que corresponda,
-   sección 2.1).
-3. Agrega la pública como línea nueva en `crates/rlp-core/llaves_app.txt`:
-   `<pública> v0.3.0 (producción, 2027-01)`. Para la web, agrega la marca:
-   `<pública> v0.3.0 [web] (producción, 2027-01)`.
-4. **No borres las líneas de llaves con las que ya se publicó**: LP Profesor las necesita para
-   seguir verificando las entregas viejas.
-5. Publica una versión nueva (sección 4): solo las apps compiladas con la lista nueva reconocen la
-   llave nueva.
+### Semáforo de alertas
 
-### 2.4 Compilar en tu computadora con la llave
-`publicar-version.ps1` pide la semilla sin mostrarla y la olvida al terminar. Para compilar sin
-publicar, defínela antes en esa ventana de PowerShell (así no queda en el historial):
+| Color | Significa |
+| --- | --- |
+| 🟢 Sin alertas | Nada fuera de lo normal. |
+| 🟡 Revisar | Algún intento de pegar, mucho tiempo fuera de la ventana (más de 10 min y más de una cuarta parte de su tiempo de práctica) o ráfagas de escritura demasiado rápidas. |
+| 🔴 Alerta | Inserciones sospechosas (texto que apareció en el editor sin teclearlo, por ejemplo con otra herramienta) o 5 o más intentos de pegar. |
 
-```powershell
-$env:RLP_CLAVE_APP = [Net.NetworkCredential]::new("", (Read-Host "Semilla" -AsSecureString)).Password
-.\scripts\compilar-windows.ps1      # o .\scripts\compilar-android.ps1
-```
+Pasa el puntero sobre el semáforo para ver los motivos. Es una señal para revisar, no una prueba:
+abre el detalle y mira la reproducción.
 
-Sin la variable se usa la llave de desarrollo y las entregas salen en amarillo.
+### Exportar a CSV
 
----
+- **⬇ CSV de avance**: una fila por alumno con completadas, porcentaje, puntos, alerta y una
+  columna por actividad con los puntos obtenidos (vacía si no la ha abierto, 0 si la intentó sin
+  completarla).
+- **⬇ CSV detallado**: una fila por alumno y actividad con pruebas pasadas, puntos, intentos,
+  minutos, intentos de pegar, tu calificación y tu comentario.
 
-## 3. Android
+Ambos exportan los alumnos visibles (grupo y búsqueda) y se abren en Excel con acentos correctos.
 
-### La llave del APK
-`.\scripts\compilar-android.ps1` compila el APK **optimizado** y lo firma con la **llave de
-depuración de tu PC**: `%USERPROFILE%\.android\debug.keystore` (la crea Android Studio; si no
-existe, el script la crea). No hace falta crear un keystore.
+## 4. Detalle de un alumno
 
-- Esa llave no cambia entre compilaciones: los alumnos **instalan cada versión nueva encima, sin
-  perder datos**, siempre que compiles en **la misma PC**.
-- **Respalda `debug.keystore`** (memoria USB o nube). Si se pierde, o compilas en otra PC, el APK
-  sale con otra firma y Android no lo deja instalar encima ("conflicto con un paquete
-  existente"): hay que desinstalar, y eso borra los datos. Pide a los alumnos que **exporten su
-  entrega antes** y después usen **Tengo mis avances en un archivo**.
-- El APK de v0.2.0 que compiló GitHub tiene otra firma: quien lo instaló debe exportar,
-  desinstalarlo e instalar el nuevo.
-- `-Depuracion` compila sin optimizar (unas 10 veces más grande): solo para probar en un
-  emulador, con `-Targets x86_64`.
-- Si cambiaste el nombre de la app y el celular sigue mostrando el anterior, regenera el proyecto
-  de Android una vez: `.\scripts\compilar-android.ps1 -Regenerar`.
+Haz clic en un alumno del tablero.
 
-### Más adelante: tu propio keystore
-Para firmar con un keystore propio (por ejemplo, si algún día se publica en una tienda):
+- **Actividades**: el curso por unidad y lección (✓ completada, ● empezada, ○ sin abrir; 🚫 con
+  intentos de pegar; tu calificación). Al elegir una actividad ves:
+  - su estado, tiempo, ejecuciones, intentos, pistas, copias, intentos de pegar y salidas;
+  - el **código** guardado (actividades de código) o la **respuesta** (predicción y opción
+    múltiple, junto a la respuesta correcta);
+  - si el código **se reconstruye tecla a tecla** desde su historial de escritura;
+  - **⏯ Ver cómo lo escribió**: reproduce la escritura con velocidad ajustable, "saltar pausas",
+    una barra para ir a cualquier momento y marcas de pegados y reinicios;
+  - **✔ Volver a correr las pruebas** con el código del alumno (en tu navegador);
+  - **Ver enunciado y solución de referencia**;
+  - **Calificación** y **comentario**: al guardar, el alumno los ve en esa actividad ("Tu
+    profesor"). Deja ambos vacíos y guarda para borrarlos.
+- **Estadísticas**: todos los contadores del alumno.
+- **🔑 Restablecer contraseña**.
 
-1. Créalo **una sola vez** y guárdalo junto con su contraseña:
-   ```powershell
-   & "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -genkeypair -v `
-     -keystore C:\llaves\lp-alumno.jks -alias lp -keyalg RSA -keysize 4096 -validity 10000
-   ```
-2. Compila con él: `.\scripts\compilar-android.ps1 -Keystore C:\llaves\lp-alumno.jks -Alias lp`.
-   Para que `publicar-version.ps1` lo use, define antes `$env:ANDROID_KEYSTORE_FILE` y
-   `$env:ANDROID_KEY_ALIAS`.
-3. Cambiar de la llave de depuración a tu keystore obliga a **desinstalar una vez**: avisa a los
-   alumnos que exporten antes.
+## 5. Uso de la cuota gratuita
 
----
+El tablero está pensado para gastar poco: lee un documento por alumno y después solo lo que
+cambia; el código de una actividad se lee solo al abrirla. Puedes dejarlo abierto durante la
+clase. Si te preocupa la cuota, revisa **Firestore → Uso** en la consola de Firebase (ver
+[límites](INSTALACION.md#límites-del-plan-gratuito)).
 
-## 4. Publicar una versión
+## 6. Tu cuenta
 
-Las apps de Windows y el APK se compilan **en tu PC**. GitHub solo hace dos cosas:
+- Para cambiar tu contraseña u olvidarla: Firebase → Authentication → Usuarios → tu cuenta →
+  **Restablecer contraseña** (te llega un correo).
+- Las soluciones de referencia viajan dentro de la app (solo se descargan al entrar como
+  profesor), pero cualquiera que conozca la dirección del archivo podría verlas, y también están
+  en el repositorio público (`curso/`). No uses la app para exámenes cuya solución deba ser
+  secreta.
 
-- **CI**: corre las pruebas en cada push y en cada PR.
-- **Build Web**: con cada etiqueta `v*`, publica la versión web en GitHub Pages y agrega su `.zip`
-  al Release.
+## Pendiente (fase 2)
 
-### Preparar (una sola vez)
-1. **En tu PC**: lo del README (Rust, Node 22, pnpm y el SDK de Android) y **GitHub CLI**:
-   `winget install GitHub.cli` y después `gh auth login`.
-2. **Secreto `RLP_CLAVE_APP_WEB`** en GitHub (sección 2.1).
-3. **GitHub Pages**, para la versión web:
-   1. **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-   2. **Settings → Secrets and variables → Actions → Variables → New repository variable**:
-      `RLP_PAGES` = `1`.
-   3. **Settings → Environments → github-pages → Deployment branches and tags → Add deployment
-      branch or tag rule**: *Ref type* **Tag**, *Name pattern* `v*` → **Add rule**. Sin esta regla,
-      GitHub solo deja publicar desde `main` y rechaza las etiquetas.
-
-   La dirección queda como `https://<usuario>.github.io/<repositorio>/`; compártela con los
-   alumnos.
-
-### Cada versión
-1. Anota los cambios en `CHANGELOG.md`, en una sección `## [X.Y.Z] — AAAA-MM-DD` con la fecha del
-   día, y sube el número de versión en `Cargo.toml`, en los `package.json` de las apps y de
-   `packages/alumno-ui`, y en los `tauri.conf.json`. Fusiona todo en `main`.
-2. En tu PC, en PowerShell, dentro de la carpeta del repositorio:
-   ```powershell
-   git checkout main
-   git pull
-   .\scripts\publicar-version.ps1
-   ```
-   Te pide la semilla `RLP_CLAVE_APP` (no se muestra) y la comprueba. Luego compila Windows y
-   Android, crea la etiqueta `vX.Y.Z` y sube todo al Release con sus notas.
-3. En unos minutos, GitHub publica la versión web (**Actions → Build Web**).
-
-| En el Release | Lo genera |
-|---|---|
-| `LP-Alumno-…-windows.zip`, `LP-Profesor-…-windows.zip` y las notas del CHANGELOG | Tu PC (`publicar-version.ps1`) |
-| `LP-Alumno-…-android.apk` | Tu PC (`publicar-version.ps1`) |
-| `LP-Alumno-…-web.zip` y GitHub Pages | GitHub (Build Web) |
-
-Opciones: `-SinAndroid` o `-SinWindows` omiten una parte. Sobre una versión ya publicada, vuelven a
-compilar y reemplazan sus archivos, siempre que el código de la app no haya cambiado desde su
-etiqueta.
-
-> **Respaldo**: si no puedes compilar en tu PC, en GitHub **Actions → Build Windows** (o **Build
-> Android**) **→ Run workflow**, eligiendo la etiqueta en *Use workflow from*. Necesitan el secreto
-> `RLP_CLAVE_APP`; el APK que hace GitHub es de depuración (mucho más grande) y con otra firma.
-
----
-
-## 5. Problemas comunes
-
-- **"La llave pública … no está en `llaves_app.txt`"**: esa semilla no es la de esta versión.
-  Comprueba con la sección 2.2; si la perdiste, crea otra (2.3).
-- **"Falta el secreto RLP_CLAVE_APP_WEB"** en Build Web: guárdalo (2.1) y vuelve a correr el
-  workflow (**Actions → la corrida → Re-run failed jobs**).
-- **"Tag … is not allowed to deploy to github-pages due to environment protection rules"** en
-  Build Web: falta la regla de etiquetas del entorno `github-pages` (sección 4, *Preparar*, paso
-  3.3). Agrégala y vuelve a correr los jobs fallidos.
-- **`publicar-version.ps1` se detiene antes de compilar**: el mensaje dice qué falta (estar en
-  `main` y al día, no tener cambios sin guardar, la fecha en el CHANGELOG o iniciar sesión con
-  `gh auth login`).
-- **Las entregas de Windows o Android salen en amarillo en "Firma de la app"**: esa versión se
-  compiló sin `RLP_CLAVE_APP`, con la llave de desarrollo (sección 2.4).
-- **Todas las entregas web salen en amarillo**: es lo esperado (sección 2).
-- **Android no deja instalar la versión nueva ("conflicto con un paquete existente")**: el APK se
-  firmó con otra llave (sección 3). Exportar, desinstalar e instalar el nuevo.
-- **"La entrega no está dirigida a este profesor"** (Descifrado en rojo): la entrega es de un
-  grupo creado con otras llaves, o el alumno no estaba en tu grupo cuando exportó. Restaura tu
-  `.rlpk` correcto, pide a ese profesor que te agregue como coprofesor o pide al alumno que se una
-  a tu grupo (**Unirme a un grupo**) y vuelva a exportar.
-- **Perdí la contraseña de mis llaves**: no se puede recuperar, y el `.rlpk` usa la misma
-  contraseña. Crea llaves nuevas y grupos nuevos, y los alumnos se unen a ellos (sus perfiles y su
-  avance se conservan). Las entregas que hagan desde entonces sí las podrás abrir.
+Que el alumno genere un **programa `.exe`** con su código desde el navegador aún no está
+disponible.

@@ -19,6 +19,6 @@ if (await prepararPwa()) {
     backend: simulado
       ? () => import("@rlp/alumno-ui/simulado").then((m) => m.crearBackendSimulado())
       : () => import("./backend-firebase").then((m) => m.crearBackendFirebase()),
-    vistaProfesor: () => import("./rol/profesor/AreaProfesor.svelte").then((m) => m.default),
+    vistaProfesor: () => import("./rol/profesor").then((m) => m.cargarAreaProfesor(simulado)),
   });
 }

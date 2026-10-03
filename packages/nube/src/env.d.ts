@@ -1,4 +1,4 @@
-// Variables de entorno de Vite que usa el cliente Firebase (ver .env.example en la raíz).
+// Variables de entorno de Vite que usa el cliente Firebase (ver apps/alumno-web/.env.example).
 interface ImportMetaEnv {
   readonly VITE_FIREBASE_API_KEY?: string;
   readonly VITE_FIREBASE_AUTH_DOMAIN?: string;

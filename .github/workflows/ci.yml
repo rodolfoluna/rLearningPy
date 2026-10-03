@@ -33,17 +33,28 @@ jobs:
       - name: Pruebas unitarias (TypeScript)
         run: pnpm vitest run
       - name: Revisión de tipos (Svelte y TypeScript)
+        run: pnpm --filter @rlp/alumno-web check
+      - name: Sitio web (PWA) compilado con el núcleo simulado (para WebKit) y bajo una subcarpeta
+        env:
+          VITE_RLP_SIMULADO: "1"
         run: |
-          pnpm --filter @rlp/alumno-web check
-          pnpm --filter @rlp/profesor check
-      - name: Sitio web (PWA) compilado, para probarlo sin conexión
-        run: pnpm --filter @rlp/alumno-web build
+          RLP_BASE=/rLearningPy/ pnpm --filter @rlp/alumno-web build
+          grep -q '/rLearningPy/assets/' apps/alumno-web/dist/index.html
+          pnpm --filter @rlp/alumno-web build
       - name: Pruebas de interfaz (Playwright; la versión web también en WebKit)
         env:
           PLAYWRIGHT_WEBKIT: "1"
         run: |
           pnpm exec playwright install --with-deps chromium webkit
           pnpm exec playwright test
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Reglas de Firestore (emuladores)
+        run: pnpm test:reglas
+      - name: Flujo profesor ↔ alumno contra los emuladores (Playwright)
+        run: pnpm e2e:emuladores
       - name: Capturas de pantalla
         if: always()
         uses: actions/upload-artifact@v4

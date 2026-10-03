@@ -1,11 +1,9 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { createServer, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
-import { extname, join, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { rutas, type DocActividad, type DocAlumno } from "@rlp/nube";
 import { expect, test } from "@playwright/test";
 import { doc, getDoc } from "firebase/firestore";
-import { alumnoNuevo, hayEmuladores, limpiarEmuladores, profesor, type Profesor } from "./emuladores";
+import { alumnoNuevo, hayEmuladores, limpiarEmuladores, profesor, servirDist, type Profesor } from "./emuladores";
 import { esperarEntrada, registrarErrores } from "./web.diagnostico";
 
 // La PWA publicada tal como quedaría en GitHub Pages (archivos estáticos en una subcarpeta, sin
@@ -17,19 +15,7 @@ import { esperarEntrada, registrarErrores } from "./web.diagnostico";
 const dist = resolve("apps/alumno-web/dist");
 test.skip(!existsSync(join(dist, "sw.js")), "Compila la versión web: pnpm --filter @rlp/alumno-web build:emulador");
 
-const tipos: Record<string, string> = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript",
-  ".mjs": "text/javascript",
-  ".css": "text/css",
-  ".wasm": "application/wasm",
-  ".json": "application/json",
-  ".webmanifest": "application/manifest+json",
-  ".png": "image/png",
-  ".zip": "application/zip",
-};
-
-let servidor: Server;
+let sitio: Awaited<ReturnType<typeof servirDist>> | null = null;
 let base = "";
 let prof: Profesor | null = null;
 
@@ -37,24 +23,13 @@ test.beforeAll(async () => {
   test.skip(!(await hayEmuladores()), "Sin emuladores de Firebase: corre `pnpm e2e:emuladores` (requiere Java 21+).");
   await limpiarEmuladores();
   prof = await profesor();
-  servidor = createServer((pedido, respuesta) => {
-    const ruta = decodeURIComponent(new URL(pedido.url ?? "/", "http://x").pathname);
-    let archivo = resolve(dist, "." + ruta.replace(/^\/rlp/, ""));
-    if (!ruta.startsWith("/rlp/") || !archivo.startsWith(dist)) return void respuesta.writeHead(404).end();
-    if (existsSync(archivo) && statSync(archivo).isDirectory()) archivo = join(archivo, "index.html");
-    if (!existsSync(archivo)) return void respuesta.writeHead(404).end();
-    respuesta.writeHead(200, { "Content-Type": tipos[extname(archivo)] ?? "application/octet-stream" });
-    respuesta.end(readFileSync(archivo));
-  });
-  await new Promise<void>((listo) => servidor.listen(0, "127.0.0.1", listo));
-  base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}/rlp/`;
+  sitio = await servirDist(dist);
+  base = sitio.base;
 });
 
 test.afterAll(async () => {
   await prof?.cerrar();
-  if (!servidor?.listening) return;
-  servidor.closeAllConnections();
-  servidor.close();
+  await sitio?.cerrar();
 });
 
 test("PWA con Firebase: primer acceso, sin conexión y sincronización", async ({ page, context }) => {
@@ -84,8 +59,7 @@ test("PWA con Firebase: primer acceso, sin conexión y sincronización", async (
   await page.waitForFunction(() => localStorage.getItem("rlp-sin-conexion"), null, { timeout: 120_000 });
 
   // Sin red: ni el sitio ni Firebase responden. La sesión, la app y Python siguen funcionando.
-  servidor.closeAllConnections();
-  await new Promise((listo) => servidor.close(listo));
+  await sitio!.cerrar();
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole("heading", { name: /Hola, Laura/ })).toBeVisible({ timeout: 30_000 });

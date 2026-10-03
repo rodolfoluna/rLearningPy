@@ -6,6 +6,7 @@ import { createUserWithEmailAndPassword, signOut, type Auth } from "firebase/aut
 import {
   arrayUnion,
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -28,6 +29,7 @@ import {
   type DocGrupo,
   type DocLogin,
   type DocUsuario,
+  type NotaProfesor,
 } from "./modelo";
 import { mensajeAuth } from "./sesion";
 
@@ -254,4 +256,40 @@ export async function guardarGrupo(
   };
   await setDoc(ref, grupo, { merge: true });
   return ref.id;
+}
+
+/**
+ * Borra un grupo. Sus alumnos quedan sin grupo (y con la política de pegado por defecto).
+ */
+export async function eliminarGrupo(grupoId: string, deps?: DependenciasProfesor): Promise<void> {
+  const db = D(deps);
+  const alumnos = await getDocs(query(collection(db, rutas.alumnos()), where("grupo", "==", grupoId)));
+  const refs = alumnos.docs.map((d) => d.ref);
+  for (let i = 0; i < refs.length; i += 450) {
+    const lote = writeBatch(db);
+    for (const r of refs.slice(i, i + 450)) lote.update(r, { grupo: null });
+    await lote.commit();
+  }
+  const lote = writeBatch(db);
+  lote.delete(doc(db, rutas.grupo(grupoId)));
+  await lote.commit();
+}
+
+/**
+ * Calificación y comentario de una actividad: en la actividad (la ve el alumno) y una copia en
+ * `resumen/contadores.notas` (tablero y CSV sin leer cada actividad). `null` borra la nota.
+ */
+export async function calificar(
+  alumnoId: string,
+  actividadId: string,
+  nota: Omit<NotaProfesor, "actualizado"> | null,
+  deps?: DependenciasProfesor,
+): Promise<NotaProfesor | null> {
+  const db = D(deps);
+  const valor: NotaProfesor | null = nota ? { ...nota, actualizado: Date.now() } : null;
+  const lote = writeBatch(db);
+  lote.set(doc(db, rutas.actividad(alumnoId, actividadId)), { nota: valor }, { merge: true });
+  lote.set(doc(db, rutas.contadores(alumnoId)), { notas: { [actividadId]: valor ?? deleteField() } }, { merge: true });
+  await lote.commit();
+  return valor;
 }

@@ -1,0 +1,76 @@
+/* Estilos comunes del área del profesor (solo se cargan con ella). */
+
+table.datos {
+  border-collapse: collapse;
+  width: 100%;
+  background: var(--superficie);
+  font-size: 0.92em;
+}
+
+table.datos th,
+table.datos td {
+  text-align: left;
+  padding: 0.5em 0.7em;
+  border-bottom: 1px solid var(--borde);
+  white-space: nowrap;
+}
+
+table.datos th {
+  background: var(--superficie-2);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+table.datos tbody tr:hover {
+  background: var(--primario-suave);
+}
+
+table.datos th button.orden {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+}
+
+.num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.alerta {
+  color: var(--aviso);
+  font-weight: 700;
+}
+
+.pagina-profesor {
+  padding: 1rem 1.2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pagina-profesor h1 {
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+.chico {
+  font-size: 0.85em;
+}
+
+.tabla-desplazable {
+  overflow: auto;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.clave {
+  font-family: var(--fuente-codigo);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}

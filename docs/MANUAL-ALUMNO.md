@@ -1,149 +1,84 @@
-# Manual de LP Alumno
+# Manual del alumno
 
-LP Alumno es tu app para aprender Python desde cero: trae el curso completo, un editor, una consola
-para correr tus programas y pruebas que revisan tu trabajo. Funciona **sin internet**.
+Aprende Python desde cero: lecciones cortas, ejemplos que puedes ejecutar y actividades que se
+revisan solas. La app funciona en el navegador de una computadora, tableta o celular, **también
+sin conexión**, y tu avance le llega a tu profesor solo.
 
-Tus avances se guardan **cifrados** con tu contraseña: nadie más puede abrirlos. Cuando entregas,
-el archivo solo lo pueden abrir tú y tu profesor.
+## 1. Primer acceso
 
-## 1. Las tres versiones
+1. Abre la dirección que te dio tu profesor (por ejemplo `https://escuela.github.io/rlp/`). La
+   primera vez necesitas internet: la app descarga el curso y Python (unos 15 MB).
+2. Escribe tu **número de control** y la **contraseña temporal** de tu tarjeta → **Entrar**.
+3. Elige tu contraseña nueva (al menos 8 caracteres) y repítela → **Guardar y continuar**.
 
-La app es la misma en las tres; elige la que tengas a la mano (o usa varias, ver la
-[sección 5](#5-compartir-tus-avances-entre-apps)).
+Desde ahí puedes trabajar aunque no haya internet, mientras no cierres sesión.
 
-| Versión | Dónde se usa | Cómo se instala |
-|---|---|---|
-| **Windows** | Computadoras de la escuela o de casa | Carpeta `LP-Alumno` (portable): se copia y se abre `LP Alumno.exe`. Puede ir en tu memoria USB. |
-| **Android** | Tu celular o tableta | Archivo `LP-Alumno-…-android.apk`: ábrelo y permite "instalar apps de origen desconocido". |
-| **Web** | Cualquier navegador: iPhone, iPad, Android, computadora | Abre la dirección que te dé tu profesor e **instálala**: en Chrome/Edge, botón *Instalar*; en iPhone/iPad, **Compartir → Agregar a pantalla de inicio**. |
+### Instalar la app (recomendado)
 
-Solo la versión de Windows puede **crear programas `.exe`**. Todo lo demás funciona igual.
+- **Chrome o Edge** (Windows, Android): aparece "Instala la app" abajo, o el ícono de instalar en
+  la barra de direcciones.
+- **iPhone o iPad (Safari)**: Compartir → **Agregar a pantalla de inicio**.
 
-## 2. Primer uso
+Instalada abre como una app, funciona sin conexión y tu navegador no borra tus avances.
 
-1. **Únete a tu grupo** (si tu profesor ya te lo dio): con el archivo de grupo `.rlpg`
-   (**Importar archivo de grupo**) o, en celular y web, con **📷 Escanear QR del grupo** que proyecta
-   tu profesor. Sin grupo puedes practicar y unirte después desde el menú con tu nombre.
-2. En **Soy nuevo**, escribe tu número de control, tu nombre completo y una contraseña de al menos
-   8 caracteres. Toca **Crear mi perfil**.
-3. Aparece **tu código de recuperación** (`XXXX-XXXX-XXXX-XXXX-XXXX`). **Anótalo en papel o en un
-   lugar seguro**: es la única forma de entrar si olvidas tu contraseña. Marca "Ya lo anoté en un
-   lugar seguro" y toca **Empezar el curso**.
+## 2. Usar el curso
 
-Las siguientes veces: pestaña **Entrar**, elige tu perfil y escribe tu contraseña.
+- **Temario** (a la izquierda): unidades, lecciones y actividades. ✓ completada, ● empezada.
+- **Lecciones**: explicación con ejemplos; el botón ▶ de un ejemplo lo ejecuta.
+- **Actividades de código**: escribe tu programa en el editor y usa
+  - **▶ Ejecutar** para probarlo (si pide datos con `input()`, escríbelos abajo y presiona Enter);
+  - **✔ Probar** para correr las pruebas automáticas. Si todas pasan, la actividad queda
+    completada y ganas sus puntos;
+  - **Pistas**, si te atoras.
+- **Predicción** y **opción múltiple**: responde y revisa la explicación.
+- Si un programa tiene un error, la app te lo explica en español y marca la línea.
 
-## 3. Usar el curso
+**Pegar está bloqueado** en el editor, la consola y las respuestas (tu profesor puede permitir
+pegar solo lo que tú copiaste dentro de la app). La app cuenta los intentos de pegar y tu
+profesor los ve. Aprenderás más escribiéndolo tú.
 
-- El **temario** (☰ en el celular) muestra las unidades. Cada lección tiene explicación y
-  actividades: de **código**, de **opción múltiple** y de **predecir la salida**.
-- En las de código:
-  - **▶ Ejecutar (F5)** corre tu programa. Si usa `input()`, escribe el dato en la consola y
-    presiona Enter.
-  - **✔ Probar (F6)** revisa tu programa con pruebas automáticas; al pasar todas, la actividad
-    queda completada.
-  - **■ Detener (Esc)** para un programa que no termina.
-  - **💡 Ver una pista** cuando te atores (queda registrado cuántas viste).
-  - **↺** (Volver al código inicial) regresa la actividad a su código de inicio; pide confirmación.
-- En el celular hay una **barra de teclas de código** (Tab, `:`, paréntesis, comillas, flechas…).
-- **No se puede pegar** en el editor: escribe tu código. Las copias, los intentos de pegar y las
-  salidas de la ventana se cuentan; tú las ves arriba (Copias, Intentos de pegar, Salidas) y tu
-  profesor también.
-- **📊 Mis estadísticas** (en el menú con tu nombre) muestra tu avance y tus contadores.
+## 3. Sin conexión y sincronización
 
-## 4. Entregar tu trabajo
+Arriba ves el estado:
 
-Menú con tu nombre → **📤 Exportar entrega**. Se crea un archivo `<número de control>_<fecha>.rlp`
-con todo tu avance:
+- **Sincronizado**: tu avance ya está en la nube.
+- **Sincronizando**: enviando lo último que escribiste.
+- **Sin conexión — cambios guardados en este equipo**: sigue trabajando; todo se guarda en tu equipo
+  y se envía solo cuando vuelva el internet (con la app abierta).
 
-| Versión | Dónde queda el archivo |
-|---|---|
-| Windows | En la carpeta que elijas (por ejemplo, tu memoria USB). |
-| Android | En "Guardar como": Descargas, Drive, etc. |
-| Web | Se **descarga** (carpeta *Descargas*; en iPhone, app *Archivos → Descargas*). |
+Antes de **cerrar sesión**, conéctate a internet para que todo se envíe. Si entras desde otro
+equipo, tu avance te sigue (cuando el primero ya lo haya enviado).
 
-Entrégalo como te pida tu profesor (USB, correo, plataforma de la escuela). Ese mismo archivo es tu
-**respaldo** y lo que usas para pasar tus avances a otra app.
+## 4. Calificaciones y comentarios
 
-## 5. Compartir tus avances entre apps
+Cuando tu profesor califica una actividad, al abrirla ves arriba **"Tu profesor"** con la
+calificación y el comentario.
 
-Puedes empezar en la escuela (Windows), seguir en tu celular (Android o web) y regresar. Lo que
-pasa tus avances de una app a otra es **el archivo `.rlp` de "Exportar entrega"**, y funciona
-igual entre cualquier combinación: Windows ↔ Android ↔ web.
+## 5. Mis estadísticas y mi cuenta
 
-### 5.1 Continuar en otra app por primera vez
+En el menú (tu nombre, arriba a la derecha):
 
-1. En la app donde trabajaste: **📤 Exportar entrega**.
-2. Lleva el archivo `.rlp` a la otra: memoria USB, Drive, correo, WhatsApp o cable USB. En iPhone,
-   guárdalo en la app *Archivos* ("Guardar en Archivos").
-3. En la otra app, en la pantalla de inicio: pestaña **Tengo mis avances en un archivo** →
-   **Elegir archivo…** → tu `.rlp` → escribe **tu contraseña** → **Continuar aquí**.
+- **📊 Mis estadísticas**: tiempo de práctica, ejecuciones, pruebas, pistas, copias, intentos de
+  pegar y salidas de la ventana.
+- **🔑 Cambiar contraseña** (necesita internet).
+- **Tema claro/oscuro**.
+- **🚪 Cerrar sesión**.
 
-Listo: aparece tu perfil con todo tu avance, tu grupo y tus estadísticas. Las siguientes veces
-entras normal, con **Entrar**.
+## 6. Olvidé mi contraseña
 
-### 5.2 Regresar a la app anterior (o ir y venir)
+Pídele a tu profesor que la **restablezca**: te dará una contraseña temporal nueva y no pierdes
+nada de tu avance. Al entrar, elige otra vez tu contraseña.
 
-Cuando tu perfil ya existe en las dos:
+## 7. Preguntas frecuentes
 
-1. En la app donde trabajaste al último: **📤 Exportar entrega**.
-2. En la otra, ya dentro de tu perfil: menú con tu nombre → **📥 Importar avances de otro equipo**
-   → elige ese `.rlp`.
+- **¿Puedo usarla en casa?** Sí: abre la misma dirección y entra con tu número de control.
+- **¿Qué pasa si se va el internet a mitad de la clase?** Nada: sigue trabajando. Se sincroniza
+  al volver.
+- **No me deja entrar sin internet.** La primera vez en cada equipo (o después de cerrar sesión)
+  necesitas conexión.
+- **Apareció "Hay una versión nueva".** Presiona **Actualizar**: tu trabajo se guarda antes.
+- **`input()` no funciona.** Recarga la página una vez (la primera visita prepara la app).
 
-La app te dice cuántos registros nuevos y cuántas actividades se actualizaron. Repite esto **cada
-vez que cambies de app**.
+## Pendiente
 
-### 5.3 ¿Y si trabajé en las dos sin pasar el archivo?
-
-No se pierde nada: al importar se juntan los historiales de las dos apps. En cada actividad queda
-como código actual **el más reciente**; las actividades completadas siguen completadas y se
-conservan las pistas e intentos. Para no confundirte, trabaja en una app a la vez y pasa el archivo
-al cambiar.
-
-### 5.4 Resumen rápido
-
-| Quiero… | En la app de origen | En la app de destino |
-|---|---|---|
-| Empezar a usar otra app | 📤 Exportar entrega | Inicio → **Tengo mis avances en un archivo** |
-| Pasar lo nuevo a una app donde ya tengo perfil | 📤 Exportar entrega | Menú → **📥 Importar avances de otro equipo** |
-| Entregar al profesor | 📤 Exportar entrega | (el profesor lo importa en LP Profesor) |
-
-## 6. Retroalimentación de tu profesor
-
-Tu profesor te comparte un archivo `.rlpr` (es uno para todo el grupo: cada quien solo puede leer lo
-suyo). Menú con tu nombre → **📬 Importar retroalimentación del profesor**. Verás tu calificación y
-los comentarios en cada actividad.
-
-## 7. Olvidé mi contraseña
-
-- **Con tu código de recuperación**: en **Entrar**, elige tu perfil → **Olvidé mi contraseña** →
-  escribe el código y una contraseña nueva. También funciona en **Tengo mis avances en un
-  archivo**.
-- **Si también perdiste el código**: pide a tu profesor un **archivo de acceso** (`.rlpa`) y una
-  **contraseña temporal**. En la pantalla de inicio elige **Tengo un archivo de acceso de mi
-  profesor**, luego **Elegir archivo de acceso…**, la contraseña temporal y una contraseña nueva.
-  Recibirás un **código de recuperación nuevo**: anótalo. Si tu perfil no está en esa app, también
-  te pedirá tu último `.rlp` (**Elegir mi último .rlp…**).
-
-## 8. Cuida tus datos
-
-| Versión | Dónde viven tus avances | Cuidado con… |
-|---|---|---|
-| Windows | Carpeta `datos` dentro de `LP-Alumno` | No borrar la carpeta. Si la PC se restaura al reiniciar, usa tu USB. |
-| Android | Dentro de la app | **Desinstalarla los borra.** Una versión nueva se instala encima y conserva tus datos; si Android no te deja ("conflicto con un paquete existente"), exporta antes de desinstalar. |
-| Web | Dentro del navegador de ese equipo | No usar **ventana privada** ni **borrar los datos del sitio**. En iPhone, instálala en la pantalla de inicio. |
-
-En todos los casos: **exporta tu entrega seguido**. La versión web te lo recuerda cada 7 días.
-Ese `.rlp` te sirve para recuperar todo en cualquier app (sección 5.1).
-
-## 9. Preguntas frecuentes
-
-- **"Ese archivo es de otro alumno"**: el `.rlp` no es tuyo; busca el que tenga tu número de
-  control en el nombre.
-- **"Contraseña o código de recuperación incorrecto"**: revisa mayúsculas. Si no la recuerdas,
-  sección 7.
-- **"Tu perfil ya está abierto en otra pestaña"** (web): cierra la otra pestaña o ventana de la app.
-- **En la web la consola dice que tus programas no pueden pedir datos con `input()`**: recarga la
-  página. Si sigue, instala la app o usa otro navegador (Chrome, Edge o Safari actualizados).
-- **No aparece el botón de crear `.exe`**: solo existe en Windows.
-- **¿Mi profesor ve todo lo que escribo?** Ve tu código, cómo lo escribiste y tus contadores
-  (copias, intentos de pegar, salidas). Por eso conviene escribir tú mismo cada programa.
+Crear un programa **`.exe`** con tu código desde la app llegará en una versión futura.

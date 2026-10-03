@@ -1,123 +1,111 @@
 # RealLearningProgramming
 
-Apps **sin conexión** para aprender y enseñar programación en Python, en español:
+App web para aprender y enseñar programación en Python, en español. Es **una sola app** (PWA
+instalable) con dos áreas:
 
-- **LP Alumno**: curso con 42 lecciones y 118 actividades (fundamentos, condiciones, ciclos,
-  funciones, cadenas, listas y 8 proyectos integradores), editor con el pegado bloqueado, consola con `input()`, pruebas automáticas,
-  errores explicados en español, pistas, generación de `.exe` y entregas cifradas.
-- **LP Profesor**: importa entregas, verifica que no se hayan modificado fuera de la app
-  (reconstruye el código tecla a tecla), muestra avance y estadísticas (copias, intentos de pegar,
-  salidas de ventana), **reproduce cómo se escribió** cada código, vuelve a correr las pruebas,
-  exporta a Excel y envía **retroalimentación firmada** a los alumnos.
+- **Alumnos**: curso con 8 unidades, 42 lecciones y 118 actividades (fundamentos, condiciones,
+  ciclos, funciones, cadenas, listas y 8 proyectos integradores), editor con el pegado bloqueado,
+  consola con `input()`, pruebas automáticas, errores explicados en español y pistas. **Funciona
+  sin conexión**: el avance se guarda en el equipo y se sincroniza solo al volver la red.
+- **Profesor**: tablero en tiempo real (avance, puntos, última sincronización y semáforo de
+  alertas por intentos de pegar, inserciones sospechosas y tiempo fuera de la ventana), detalle
+  por alumno con su código, **reproducción de cómo lo escribió** tecla a tecla, volver a correr
+  las pruebas, calificaciones y comentarios que el alumno ve en su actividad, alta de alumnos
+  (uno por uno o en lote) con contraseñas temporales para imprimir, restablecer contraseñas,
+  grupos con su política de pegado y exportación a CSV.
 
-Windows (ambas apps), Android (App Alumno, APK) y **web** (App Alumno instalable desde el
-navegador, también sin conexión). Las tres versiones de la App Alumno comparten la interfaz y el
-núcleo, y sus entregas son las mismas. El diseño completo está en [`docs/DISENO.md`](docs/DISENO.md);
-la versión web, en [`docs/PWA.md`](docs/PWA.md).
+Todos entran por la misma pantalla: el alumno con su **número de control**, el profesor con su
+**correo**.
+
+Costo: **$0**. Los archivos (la app y Python en WebAssembly) se publican en **GitHub Pages** y
+los datos viven en **Firebase** (Authentication + Firestore) en el plan gratuito **Spark**, sin
+tarjeta. Alcanza para un profesor con varios grupos de ~35 alumnos (ver
+[límites del plan gratuito](docs/INSTALACION.md#límites-del-plan-gratuito)).
+
+## Documentación
+
+- [Guía de instalación](docs/INSTALACION.md): crear el proyecto de Firebase, publicar en GitHub
+  Pages, configurar al profesor y dar de alta a los alumnos, paso a paso.
+- [Manual del profesor](docs/MANUAL-PROFESOR.md)
+- [Manual del alumno](docs/MANUAL-ALUMNO.md)
+- [Diseño técnico](docs/DISENO.md): arquitectura, modelo de datos, reglas y sincronización.
 
 ## Stack
 
-Tauri 2 · Rust (`rlp-core`, también compilado a WebAssembly) · Svelte 5 + TypeScript ·
-CodeMirror 6 · Pyodide (CPython 3.14 en WebAssembly) · PyInstaller · SQLite · IndexedDB y
-service worker (versión web).
+Svelte 5 + TypeScript · Vite · CodeMirror 6 · Pyodide (CPython en WebAssembly, en un worker) ·
+Firebase Auth + Firestore (caché persistente sin conexión) · service worker propio (sin
+conexión y página aislada para `input()`) · Vitest · Playwright · Firebase Emulator Suite.
+
+```
+apps/alumno-web          la app (PWA): acceso, área del alumno y área del profesor (src/rol/profesor)
+packages/alumno-ui       interfaz del alumno (Svelte)
+packages/nube            cliente de Firebase: modelo de datos, sesión, operaciones del profesor
+packages/editor          CodeMirror 6 con bloqueo de pegado e historial de edición
+packages/python-worker   Pyodide en un worker: ejecutar, input(), pruebas, errores en español
+packages/curso           curso compilado (JSON) y sus tipos
+packages/ui-comun        componentes y estilos compartidos
+curso/                   contenido del curso (Markdown + YAML + Python)
+firestore.rules          reglas de seguridad de Firestore (firestore.indexes.json: índices)
+tests/                   reglas (emuladores), e2e (Playwright) y banco de pruebas del editor/Python
+```
 
 ## Desarrollo
 
-Requisitos: Node 22 + pnpm 10, Rust estable, Python 3 (para validar el curso). En Linux, además,
-`libwebkit2gtk-4.1-dev` para compilar las apps.
+Requisitos: Node 22 + pnpm 10, Python 3 (para validar el curso) y, para los emuladores de
+Firebase, Java 21 o superior.
 
 ```bash
 pnpm install
-pnpm preparar                 # compila el curso y copia Pyodide
-pnpm dev:alumno               # interfaz en el navegador con núcleo simulado (http://localhost:1420)
-pnpm dev:alumno-web           # versión web con el núcleo real en WebAssembly (http://localhost:1422)
-pnpm dev:profesor             # http://localhost:1421 (contraseña de demo: profesor1234)
-pnpm --filter @rlp/alumno tauri dev   # app real
+pnpm dev            # compila el curso, copia Pyodide y abre http://localhost:1422
 ```
 
-La versión web compila el núcleo a WebAssembly con `pnpm wasm`. Requiere, una sola vez,
-`rustup target add wasm32-unknown-unknown` y `cargo install wasm-bindgen-cli --version 0.2.129
---locked` (la versión de `wasm-bindgen` en `Cargo.lock`).
+Sin configuración de Firebase, `pnpm dev` usa **datos simulados** en memoria (también con
+`?simulado`):
+
+- alumno: cualquier número de control con la contraseña `gato-1234`;
+- profesor: `profesor@demo.local` / `profesor-demo` (con alumnos de ejemplo).
+
+Con Firebase de verdad, copia `apps/alumno-web/.env.example` como `apps/alumno-web/.env.local` y
+llena los valores. Con los emuladores locales: `pnpm emuladores` en una terminal y en otra
+`pnpm --filter @rlp/alumno-web dev --mode emulador`.
 
 ## Pruebas
 
 ```bash
-cargo test -p rlp-core                 # núcleo: cifrado, historial, entregas, manipulaciones
-cargo test -p rlp-web                  # núcleo de la versión web (perfiles en memoria + diario)
-pnpm vitest run                        # lógica del editor
-python3 scripts/validar_curso.py       # soluciones del curso en CPython
-node scripts/validar-curso-pyodide.mjs # ... y en Pyodide
-pnpm exec playwright test              # interfaz y Pyodide en Chromium (versión web: requiere
-                                       # pnpm wasm y, para la prueba sin conexión, su build)
-./scripts/autoprueba.sh                # apps reales: profesor → alumno → profesor (Xvfb)
+pnpm test                  # Vitest: progreso, editor, modelo, tablero/CSV/reproducción del profesor
+pnpm check                 # svelte-check
+pnpm test:reglas           # reglas de Firestore y flujo de cuentas contra los emuladores (Java 21+)
+pnpm e2e                   # Playwright: banco del editor/Python y la app con datos simulados
+pnpm e2e:emuladores        # Playwright con la app compilada bajo /rlp/ y los emuladores:
+                           #   profesor crea alumno → el alumno entra, cambia su contraseña y
+                           #   resuelve sin conexión → el tablero muestra el avance → calificar →
+                           #   restablecer contraseña
+python3 scripts/validar_curso.py        # soluciones del curso en CPython
+node scripts/validar-curso-pyodide.mjs  # ... y en Pyodide
 ```
 
-## Curso
-
-El contenido está en `curso/` (Markdown + YAML + Python). Para agregar una actividad, edita el
-`actividades.yaml` de la lección, ejecuta `pnpm curso` y valida con `python3 scripts/validar_curso.py`.
+En Windows, si Java no está en el `PATH`, define `JAVA_HOME` (por ejemplo, el JBR de Android
+Studio: `C:\Program Files\Android\Android Studio\jbr`).
 
 ## Compilar y publicar
 
-Las apps de Windows y el APK de Android se compilan **en la computadora de quien publica**
-(Windows). En GitHub solo corren **CI** (pruebas en cada push y PR) y **Build Web** (la versión
-web); Build Windows y Build Android quedan como respaldo manual (Actions → Run workflow).
-
-```powershell
-.\scripts\compilar-windows.ps1                    # zips portables en dist-portable\ (-Autoprueba: flujo completo)
-.\scripts\compilar-android.ps1                    # APK optimizado en dist-android\
-.\scripts\publicar-version.ps1                    # compila ambos, crea la etiqueta y sube el Release
+```bash
+pnpm build                                   # apps/alumno-web/dist (ruta relativa: sirve en cualquier carpeta)
+RLP_BASE=/mi-repo/ pnpm build                # con ruta absoluta, como en GitHub Pages
+pnpm desplegar:reglas --project <id>         # publica firestore.rules y los índices
 ```
 
-Para publicar una versión:
+En GitHub, el workflow **Publicar la app web** (`.github/workflows/build-web.yml`) compila con los
+secretos `VITE_FIREBASE_*` y publica en Pages en cada push a `main`. **Publicar reglas de
+Firestore** (`firebase-reglas.yml`) publica las reglas si configuras una cuenta de servicio. Todo
+está explicado en la [guía de instalación](docs/INSTALACION.md).
 
-1. Anota los cambios en `CHANGELOG.md` (`## [X.Y.Z] — AAAA-MM-DD`) y sube la versión en
-   `Cargo.toml`, los `package.json` (apps y `packages/alumno-ui`) y los `tauri.conf.json`. Fusiona
-   en `main`.
-2. En tu PC: `git checkout main`, `git pull` y `.\scripts\publicar-version.ps1`. Pide la semilla de
-   la llave de firma (`RLP_CLAVE_APP`, no se muestra), la verifica, compila Windows y Android, crea
-   la etiqueta `vX.Y.Z` y sube los zips, el APK y las notas del `CHANGELOG.md` al **Release**
-   (requiere [GitHub CLI](https://cli.github.com/): `winget install GitHub.cli`, `gh auth login`).
-3. Con la etiqueta, **Build Web** verifica la llave web, agrega `LP-Alumno-*-web.zip` al Release y
-   publica el sitio en GitHub Pages.
+## Curso
 
-Las llaves de firma (la nativa, que se queda en tu gestor de contraseñas, y la web, que va en el
-secreto `RLP_CLAVE_APP_WEB`), cómo cambiarlas y la configuración de GitHub Pages están en el
-[manual del profesor](docs/MANUAL-PROFESOR.md). Sus llaves públicas están en
-`crates/rlp-core/llaves_app.txt`.
+El contenido está en `curso/`. Para agregar una actividad, edita el `actividades.yaml` de la
+lección, ejecuta `pnpm curso` y valida con `python3 scripts/validar_curso.py`.
 
-La guía para instalar en un laboratorio está en [`docs/INSTALACION.md`](docs/INSTALACION.md).
-Manuales de uso: [alumno](docs/MANUAL-ALUMNO.md) (incluye cómo pasar los avances entre Windows,
-Android y la web) y [profesor](docs/MANUAL-PROFESOR.md) (llaves del profesor, claves de firma,
-Android, GitHub Pages y cómo publicar una versión).
+## Pendiente (fase 2)
 
-### Versión web
-
-El workflow **Build Web** genera el sitio (`LP-Alumno-*-web.zip`, archivos estáticos para
-cualquier hosting) en cada push a `main`. Para publicarlo con cada etiqueta `v*`:
-
-1. El secreto `RLP_CLAVE_APP_WEB` con la semilla de la llave web (su llave pública está en
-   `llaves_app.txt` con la marca `[web]`).
-2. Para GitHub Pages: Settings → Pages → Source: **GitHub Actions**; la variable del repositorio
-   `RLP_PAGES` = `1`; y en Settings → Environments → **github-pages**, una regla que permita las
-   etiquetas `v*` (por defecto solo deja publicar desde `main`).
-
-### Windows y Android en tu computadora
-
-Requisitos (Windows): Rust con las herramientas de C++ de Visual Studio, Node 22 y pnpm (`pnpm
-install` hecho). Para Android, además, el SDK con **NDK**, **Build-Tools** y **Platform-Tools**
-(desde el SDK Manager de Android Studio) y Java 17 (el de Android Studio sirve); el script toma el
-SDK de `ANDROID_HOME` o, si no está definida, de `E:\Android`.
-
-```powershell
-.\scripts\compilar-android.ps1                    # APK optimizado (arm64 y armv7) en dist-android\
-.\scripts\compilar-android.ps1 -Instalar          # ... y lo instala con adb en el celular conectado
-.\scripts\compilar-android.ps1 -Depuracion -Targets x86_64   # sin optimizar, para un emulador
-.\scripts\compilar-android.ps1 -Keystore C:\llaves\lp-alumno.jks -Alias lp   # con tu keystore
-```
-
-Sin `-Keystore`, el APK se firma con la llave de depuración de tu PC
-(`%USERPROFILE%\.android\debug.keystore`), que no cambia entre compilaciones: las versiones nuevas
-se instalan encima y conservan los datos mientras compiles en la misma PC. Respalda ese archivo;
-con otra llave, para actualizar hay que desinstalar (se borran los datos de la app). Sin
-`RLP_CLAVE_APP`, las entregas salen con la firma de desarrollo (amarillo en LP Profesor).
+Crear un **programa `.exe`** desde el navegador: un lanzador precompilado con Python embebido al
+que la app le agrega el código del alumno, sin servidor y sin conexión. Aún no está hecho.

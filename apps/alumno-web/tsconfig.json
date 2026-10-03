@@ -14,5 +14,5 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker.ImportScripts"]
   },
   "include": ["src/**/*.ts", "src/**/*.svelte", "../../packages/*/src/**/*.ts", "../../packages/*/src/**/*.svelte"],
-  "exclude": ["../../packages/*/src/**/*.test.ts"]
+  "exclude": ["src/**/*.test.ts", "../../packages/*/src/**/*.test.ts"]
 }

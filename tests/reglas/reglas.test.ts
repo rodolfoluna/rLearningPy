@@ -103,6 +103,24 @@ describe("alumnos", () => {
     await assertFails(setDoc(doc(db, "grupos/g1"), { nombre: "x", politicas: { pegado: "propio" } }));
   });
 
+  it("el alumno no puede escribir las notas del profesor ni borrar su progreso", async () => {
+    await env.withSecurityRulesDisabled((c) =>
+      setDoc(doc(c.firestore(), "alumnos/ana/actividades/a1"), { nota: { calificacion: 6, comentario: "", actualizado: 1 } }, { merge: true }),
+    );
+    const db = alumno("uid-ana");
+    const nota = { calificacion: 10, comentario: "", actualizado: 2 };
+    await assertFails(setDoc(doc(db, "alumnos/ana/actividades/a1"), { nota }, { merge: true }));
+    await assertFails(setDoc(doc(db, "alumnos/ana/actividades/a9"), { codigo: "x", nota }));
+    await assertFails(setDoc(doc(db, "alumnos/ana/resumen/contadores"), { notas: { a1: nota } }, { merge: true }));
+    await assertFails(deleteDoc(doc(db, "alumnos/ana/actividades/a1")));
+    // Lo demás de la actividad (con la nota del profesor intacta) sí lo escribe.
+    await assertSucceeds(setDoc(doc(db, "alumnos/ana/actividades/a1"), { codigo: "print(2)", completada: true }, { merge: true }));
+    await assertSucceeds(
+      setDoc(doc(db, "alumnos/ana/resumen/contadores"), { avance: { a1: { completada: true, puntos: 10 } } }, { merge: true }),
+    );
+    await assertFails(getDocs(collectionGroup(db, "resumen")));
+  });
+
   it("una cuenta sin usuarios/{uid} no lee nada de alumnos", async () => {
     const db = alumno("uid-desconocido");
     await assertFails(getDoc(doc(db, "alumnos/ana")));
@@ -127,7 +145,10 @@ describe("profesor", () => {
     const db = profesor();
     await assertSucceeds(getDocs(collection(db, "alumnos")));
     await assertSucceeds(getDocs(collectionGroup(db, "actividades")));
+    await assertSucceeds(getDocs(collectionGroup(db, "resumen")));
     await assertSucceeds(getDoc(doc(db, "alumnos/beto/actividades/a1")));
+    await assertSucceeds(setDoc(doc(db, "alumnos/beto/actividades/a1"), { nota: { calificacion: 9, comentario: "Bien", actualizado: 1 } }, { merge: true }));
+    await assertSucceeds(setDoc(doc(db, "alumnos/beto/resumen/contadores"), { notas: { a1: { calificacion: 9 } } }, { merge: true }));
     await assertSucceeds(updateDoc(doc(db, "alumnos/ana"), { grupo: "g2", nombre: "Ana María" }));
     await assertSucceeds(setDoc(doc(db, "usuarios/uid-nuevo"), { alumnoId: "ana" }));
     await assertSucceeds(deleteDoc(doc(db, "usuarios/uid-ana")));

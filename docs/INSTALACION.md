@@ -1,145 +1,190 @@
-# Instalación en un laboratorio
+# Guía de instalación
 
-Guía para poner a funcionar **LP Alumno** y **LP Profesor** en las computadoras de una escuela.
-Para el uso diario están el [manual del alumno](MANUAL-ALUMNO.md) y el
-[manual del profesor](MANUAL-PROFESOR.md) (llaves, claves de firma y publicación).
-Ninguna de las dos apps necesita internet ni permisos de administrador.
+Esta guía deja la app funcionando en internet, gratis, para un profesor y sus grupos. Se hace una
+sola vez y toma alrededor de una hora. No necesitas tarjeta de crédito.
 
-## 1. Descargar
+Vas a usar dos servicios:
 
-En la página de **Releases** del repositorio descarga los dos archivos de la versión más reciente:
+- **Firebase** (de Google), en el plan gratuito **Spark**: las cuentas (Authentication) y los
+  datos (Firestore: alumnos, grupos, avance).
+- **GitHub Pages**: publica la app (los archivos, incluido Python en WebAssembly).
 
-- `LP-Alumno-<versión>-windows.zip` (≈ 60 MB; incluye Python para crear ejecutables)
-- `LP-Profesor-<versión>-windows.zip`
+Al final tendrás una dirección como `https://<tu-usuario>.github.io/<repositorio>/` que abren
+tú y tus alumnos.
 
-Requisitos: Windows 10 u 11 de 64 bits con **Microsoft Edge WebView2**. Windows 11 ya lo trae y
-Windows 10 lo recibe con Windows Update. Si una computadora no lo tiene y no hay internet,
-descarga en otra computadora el instalador **"Evergreen Standalone Installer" (x64)** desde la
-página de WebView2 de Microsoft y ejecútalo en cada equipo.
+## Antes de empezar
 
-## 2. Preparar la App Profesor (una sola vez)
+- Una cuenta de Google (para Firebase) y una de GitHub.
+- Una copia de este repositorio en tu cuenta de GitHub: botón **Fork** (o **Use this template**).
+  Para publicar en Pages con una cuenta gratuita, el repositorio debe ser **público**.
+- Opcional, para publicar las reglas desde tu computadora: Node 22 y pnpm 10
+  (`npm install -g pnpm`).
 
-1. Descomprime `LP-Profesor` en tu computadora (por ejemplo, en `Documentos`).
-2. Abre **LP Profesor.exe** y crea tus llaves con una contraseña de al menos 10 caracteres.
-3. **Guarda el respaldo de tus llaves** (`.rlpk`) en una memoria USB o en tu nube.
-   Sin tus llaves no se pueden abrir las entregas de tus alumnos.
-4. En **Grupos**, crea un grupo por cada clase (nombre, formato del número de control, política
-   de pegado).
+## 1. Crear el proyecto de Firebase
 
-Tus datos quedan en la carpeta `datos_profesor`, junto a la app. Respáldala de vez en cuando.
+1. Entra a <https://console.firebase.google.com> y elige **Crear un proyecto** (o "Agregar
+   proyecto").
+2. Ponle un nombre, por ejemplo `rlp-programacion`. Anota el **ID del proyecto** que aparece
+   debajo del nombre (por ejemplo `rlp-programacion-1a2b3`): lo usarás varias veces.
+3. Google Analytics no hace falta: puedes desactivarlo.
+4. Al terminar, el proyecto queda en el plan **Spark** (gratuito). No lo cambies a Blaze.
 
-## 3. Instalar la App Alumno en el laboratorio
+## 2. Activar el inicio de sesión con correo y contraseña
 
-La carpeta es **portable**: se copia, no se instala.
+1. En el menú de la izquierda: **Compilación → Authentication → Comenzar**.
+2. Pestaña **Método de acceso** → **Correo electrónico/contraseña** → activa la primera opción
+   (no hace falta "vínculo de correo electrónico") → **Guardar**.
 
-1. Descomprime `LP-Alumno` una vez.
-2. En la App Profesor, en tu grupo, elige **"Instalar en carpeta de la App Alumno"** y selecciona
-   esa carpeta: así cada alumno queda unido al grupo desde el primer uso.
-   (Otra opción: **"Guardar archivo de grupo"** y compartir el `.rlpg` para que cada alumno lo
-   importe.)
-3. Copia la carpeta a cada computadora, por ejemplo a `C:\LP-Alumno` o a `D:\`, en un lugar
-   donde los alumnos **puedan escribir**. También pueden llevarla en su memoria USB.
-4. Crea un acceso directo a `LP Alumno.exe` en el escritorio.
+Los alumnos no necesitan correo: la app convierte su número de control en una cuenta interna
+(`<control>@alumnos.rlp.local`).
 
-Cada alumno se registra con su número de control, su nombre y una contraseña, y **anota su
-código de recuperación**. Varias personas pueden usar la misma carpeta: cada perfil está cifrado
-con la contraseña de su dueño.
+## 3. Crear la base de datos Firestore
 
-### Antivirus
+1. **Compilación → Firestore Database → Crear base de datos**.
+2. Edición **Standard**, ubicación cercana (por ejemplo `nam5` o `us-central1`; no se puede
+   cambiar después).
+3. Elige **Comenzar en modo de producción** (todo cerrado). Las reglas de la app se publican en
+   el paso 7.
 
-La opción **Crear .exe** genera programas con PyInstaller. Algunos antivirus desconfían de los
-ejecutables nuevos. Si se bloquean, agrega una excepción para las carpetas `runtime` y
-`mis_ejecutables` dentro de la carpeta de la App Alumno.
+## 4. Registrar la app web y copiar su configuración
 
-### Computadoras que se restauran al reiniciar
+1. En **Configuración del proyecto** (el engrane junto a "Descripción general") → pestaña
+   **General** → sección **Tus apps** → ícono **`</>`** (Web).
+2. Ponle un apodo (por ejemplo `rlp-web`). **No** marques Firebase Hosting. **Registrar app**.
+3. Firebase muestra un bloque `firebaseConfig`. Copia estos cuatro valores:
 
-Si el laboratorio borra los cambios al reiniciar (congeladores como Deep Freeze), pon la carpeta
-de la app en una unidad que no se restaure o pide a los alumnos que usen su memoria USB. Al final
-de cada clase deben **exportar su entrega**, que también les sirve de respaldo.
+   | En `firebaseConfig` | Secreto de GitHub (paso 6)   |
+   | ------------------- | ---------------------------- |
+   | `apiKey`            | `VITE_FIREBASE_API_KEY`      |
+   | `authDomain`        | `VITE_FIREBASE_AUTH_DOMAIN`  |
+   | `projectId`         | `VITE_FIREBASE_PROJECT_ID`   |
+   | `appId`             | `VITE_FIREBASE_APP_ID`       |
 
-## 4. Recibir y revisar entregas
+   Estos valores no son contraseñas: identifican tu proyecto y viajan dentro de la app. Lo que
+   protege los datos son las reglas de Firestore (paso 7).
 
-1. Cada alumno usa **Exportar entrega** y te da su archivo `.rlp` (USB, carpeta compartida,
-   correo o plataforma de la escuela). El archivo solo lo pueden abrir el alumno y tú.
-2. En la App Profesor, **Importar entregas** acepta archivos sueltos o una carpeta completa.
-   Puedes importar entregas nuevas del mismo alumno cuantas veces quieras: se guarda el historial.
-3. Revisa el **semáforo de integridad** (verde, amarillo, rojo), el avance, las estadísticas de
-   copias e intentos de pegar y el código de cada actividad; con "Ver cómo lo escribió" puedes
-   reproducir la escritura tecla a tecla. Exporta a Excel.
-4. Para devolver calificaciones y comentarios, en el tablero usa **Retroalimentación**: comparte
-   el `.rlpr` con todo el grupo (cada alumno solo puede abrir lo suyo) y cada quien lo importa
-   desde el menú con su nombre.
+## 5. Autorizar el dominio de GitHub Pages
 
-## 5. Celulares Android
+**Authentication → Configuración → Dominios autorizados → Agregar dominio** y escribe
+`<tu-usuario>.github.io` (solo el dominio, sin `https://` ni el nombre del repositorio). Sin
+esto, el inicio de sesión falla en la página publicada.
 
-Para quien no tiene computadora en casa hay un **APK** de LP Alumno. Viene en el Release
-(`LP-Alumno-<versión>-android.apk`) o se compila en una computadora con Windows y el SDK de
-Android con `scripts\compilar-android.ps1` (ver el README).
+## 6. Configurar GitHub: secretos y Pages
 
-1. En el celular, abre el APK y permite "instalar apps de origen desconocido" para el navegador o
-   el administrador de archivos.
-2. En la App Profesor, en **Grupos → QR para celulares**, proyecta el código; cada alumno toca
-   **📷 Escanear QR del grupo** antes de registrarse (o después, desde el menú con su nombre).
-3. Para entregar, **Exportar entrega** abre "Guardar como": se puede guardar en Descargas o en
-   Drive y compartir desde ahí.
+En tu repositorio de GitHub:
 
-> **Importante**: en Android los datos viven dentro de la app. **Desinstalarla los borra**:
-> exporta tu entrega antes. Una versión nueva se instala encima y conserva los datos siempre que el
-> APK esté firmado con la misma llave (la de la computadora donde se compila: ver el
-> [manual del profesor](MANUAL-PROFESOR.md#3-android)). Si Android no deja instalarla
-> ("conflicto con un paquete existente"), la llave cambió: **exporta la entrega**, desinstala,
-> instala la nueva y usa "Tengo mis avances en un archivo".
+1. **Settings → Secrets and variables → Actions → New repository secret**. Crea los cuatro
+   secretos de la tabla del paso 4 (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`,
+   `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`) con sus valores.
+2. **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+3. **Actions**: si GitHub pregunta, habilita los workflows del fork.
+4. Publica: pestaña **Actions → Publicar la app web → Run workflow** (o haz cualquier cambio en
+   `main`). Al terminar (unos 5 minutos), el paso "Publicar en GitHub Pages" muestra la dirección
+   de la app.
 
-## 6. Versión web (sin instalar nada)
+La app se publica en `https://<tu-usuario>.github.io/<repositorio>/`. Si el repositorio se llama
+`<tu-usuario>.github.io` o usas un dominio propio, se publica en la raíz. Para otra ruta, crea la
+variable del repositorio `RLP_BASE` (Settings → Secrets and variables → Actions → Variables), por
+ejemplo `/` o `/programacion/`.
 
-La App Alumno también funciona **en el navegador**: es la misma app, con el mismo curso y las
-mismas entregas `.rlp`. Sirve para celulares (también iPhone), tabletas y computadoras donde no se
-puede copiar la carpeta portable.
+Cada vez que se actualice `main`, la app se vuelve a publicar sola. Las apps abiertas muestran
+"Hay una versión nueva" y se actualizan con un clic.
 
-**Publicarla** (una vez, quien administra el repositorio): el workflow "Build Web" la publica en
-GitHub Pages (ver el README) o genera un `.zip` con archivos estáticos que se pueden subir a
-cualquier hosting, también una carpeta del servidor de la escuela. No necesita configuración
-especial del servidor.
+## 7. Publicar las reglas de seguridad de Firestore
 
-**Para el alumno:**
+Las reglas (`firestore.rules`) deciden quién puede leer y escribir cada dato: el profesor ve todo;
+cada alumno solo su propio avance. **Sin este paso la app no funciona** (la base de datos está
+cerrada). Elige una de dos formas.
 
-1. Abre la dirección de la app en Chrome, Edge o Safari.
-2. **Instálala**: en Chrome/Edge/Android aparece el botón *Instalar*; en iPhone/iPad toca
-   **Compartir → Agregar a pantalla de inicio**. Ya instalada, funciona **sin conexión** (avisa
-   cuando termina de descargar Python).
-3. Para unirse al grupo: escanear el **QR** que proyecta el profesor o importar el `.rlpg`.
-4. **Exportar entrega** descarga el `.rlp` (queda en *Descargas*); se entrega igual que siempre.
+### Opción A: desde tu computadora (más sencilla)
 
-> **Importante**: en la versión web los avances viven en el navegador de ese equipo. No uses una
-> ventana privada, no borres los datos del sitio y **exporta tu entrega seguido**: la app lo
-> recuerda cada 7 días. En iPhone, instálala en la pantalla de inicio para que Safari no la borre.
+```bash
+git clone https://github.com/<tu-usuario>/<repositorio>.git
+cd <repositorio>
+pnpm install
+pnpm exec firebase login                       # abre el navegador para entrar con tu cuenta de Google
+pnpm desplegar:reglas --project <id-del-proyecto>
+```
 
-En la App Profesor, las entregas hechas en la versión web marcan en **amarillo** "Firma de la app"
-(el código de una página web se puede descargar, así que su firma no prueba nada por sí sola). El
-resto de las revisiones, incluida la reproducción tecla a tecla, funcionan igual.
+Repite el último comando cada vez que cambien `firestore.rules` o `firestore.indexes.json`.
 
-## 7. Continuar en casa
+### Opción B: desde GitHub Actions
 
-El alumno exporta su `.rlp` y, en otra computadora con la App Alumno (o en la versión web), elige
-**"Tengo mis avances en un archivo"** e ingresa su contraseña. Para volver, exporta allá e
-importa acá con **"Importar avances de otro equipo"**.
+1. En Google Cloud (<https://console.cloud.google.com/iam-admin/serviceaccounts>, con tu
+   proyecto elegido arriba) → **Crear cuenta de servicio** → nombre `reglas-firestore` → dale los
+   roles **Firebase Rules Admin** y **Cloud Datastore Index Admin** → **Listo**.
+2. En la cuenta creada → **Claves → Agregar clave → Crear clave nueva → JSON**. Se descarga un
+   archivo.
+3. En GitHub crea el secreto `FIREBASE_SERVICE_ACCOUNT` y pega **todo** el contenido del archivo.
+   Después borra el archivo de tu computadora.
+4. **Actions → Publicar reglas de Firestore → Run workflow**. A partir de ahí se publican solas
+   cuando cambian en `main`.
 
-## 8. Actualizar a una versión nueva
+## 8. Configurar la cuenta del profesor (una sola vez)
 
-Los datos viven en la carpeta de cada app, así que al actualizar **no borres**:
+1. Abre la dirección de la app.
+2. En la pantalla de acceso, abajo, elige **Configurar la app por primera vez (profesor)**.
+3. Escribe tu correo real y una contraseña de al menos 8 caracteres → **Crear cuenta de
+   profesor**.
 
-- En la App Alumno: la carpeta `datos` (perfiles de los alumnos) y `config` (grupo instalado).
-- En la App Profesor: la carpeta `datos_profesor`.
+Solo puede haber un profesor: en cuanto se crea, el enlace desaparece y las reglas impiden que
+alguien más se registre como profesor. Desde ese momento entras con tu correo y tu contraseña en
+la misma pantalla que los alumnos.
 
-Pasos: descomprime la versión nueva y copia encima **solo** el `.exe`, `runtime` y `LEEME.txt`,
-o copia las carpetas `datos`/`config` (o `datos_profesor`) de la instalación anterior a la nueva.
-Las entregas de versiones anteriores se siguen verificando.
+> Si olvidas tu contraseña de profesor: Firebase → Authentication → Usuarios → los tres puntos de
+> tu cuenta → **Restablecer contraseña** (te llega un correo).
 
-## 9. Olvidé mi contraseña
+## 9. Crear grupos y dar de alta a los alumnos
 
-- **Alumno**: en la pantalla de inicio, "Olvidé mi contraseña" con su código de recuperación.
-  Si también lo perdió: en la App Profesor, en el detalle del alumno, **Archivo de acceso** crea un
-  `.rlpa` y muestra una contraseña temporal; el alumno elige "Tengo un archivo de acceso de mi
-  profesor", pone una contraseña nueva y recibe un código de recuperación nuevo.
-- **Profesor**: "Restaurar desde un respaldo" con el archivo `.rlpk` y la contraseña con la que lo
-  guardó.
+Dentro del área del profesor:
+
+1. **👥 Grupos → Nuevo grupo**: nombre (por ejemplo "Programación 1A") y la política de pegado
+   (**Bloquear siempre** o **Permitir solo lo copiado dentro de la app**).
+2. **🎓 Alumnos**: elige el grupo y
+   - escribe número de control y nombre → **Crear alumno**, o
+   - abre **Varios a la vez**, pega la lista (una línea por alumno: `21340500,Karla Pérez`; sirve
+     copiar dos columnas de Excel) o **Sube un CSV** → **Crear N alumnos**.
+3. Aparece la tabla de **credenciales** con la contraseña temporal de cada alumno. **Descárgala
+   (CSV) o imprímela ahora** (🖨 imprime una tarjeta recortable por alumno): las contraseñas no se
+   guardan en ningún lado. Si se pierde alguna, usa **Restablecer contraseña**.
+4. Reparte las tarjetas. Cada alumno entra con su número de control y su contraseña temporal, y
+   la app le pide elegir una nueva.
+
+Detalles en el [manual del profesor](MANUAL-PROFESOR.md).
+
+## Límites del plan gratuito
+
+| Servicio | Límite gratuito | Uso esperado |
+| --- | --- | --- |
+| Firestore: lecturas | 50 000 por día | Abrir el tablero cuesta ~2 por alumno (70 con 35 alumnos) y luego ~1 por alumno activo por minuto. Cada alumno al entrar lee su avance (≤ 120). |
+| Firestore: escrituras | 20 000 por día | Un alumno escribe ~1 vez cada 30–60 s mientras teclea, más al probar o terminar. 35 alumnos tecleando sin parar durante una clase de 2 h: hasta ~12 000. |
+| Firestore: almacenamiento | 1 GiB | Un alumno con el curso completo ocupa unos pocos MB (el historial de escritura es lo más grande). |
+| Authentication | Sin costo para correo y contraseña | Crear muchas cuentas seguidas desde la misma red puede frenarse por unos minutos (protección contra abuso): si falla una alta en lote, espera y vuelve a intentar las que faltaron. |
+| GitHub Pages | ~100 GB de transferencia al mes, sitio ≤ 1 GB | Cada alumno descarga ~15 MB la primera vez (Python incluido) y después la app sale de su caché. |
+
+Por eso la app se publica en **GitHub Pages y no en Firebase Hosting**: en Spark, Hosting solo
+permite **360 MB de transferencia al día**; 35 alumnos descargando Python el primer día ya lo
+superarían.
+
+Si un día se acaba la cuota de Firestore, los alumnos siguen trabajando sin conexión (todo se
+guarda en su equipo) y se sincroniza al día siguiente, cuando la cuota se reinicia. En la consola
+de Firebase (**Firestore → Uso**) ves el consumo diario. Varios grupos grandes trabajando el mismo
+día pueden acercarse al límite de escrituras.
+
+## Problemas comunes
+
+- **"auth/unauthorized-domain"** o el inicio de sesión no hace nada en la página publicada: falta
+  el paso 5.
+- **"Missing or insufficient permissions"** / la app no carga datos: falta publicar las reglas
+  (paso 7) o se publicaron en otro proyecto (revisa `--project`).
+- **El workflow falla en "Revisar la configuración de Firebase"**: faltan los secretos del paso 6.
+- **La página publicada sale en blanco o sin estilos**: revisa la variable `RLP_BASE` (debe
+  coincidir con la ruta de la dirección y terminar en `/`).
+- **El enlace "Configurar la app por primera vez" no aparece**: ya hay un profesor configurado
+  (documento `config/app` en Firestore). Si fue un error, bórralo desde la consola de Firestore y
+  recarga la app.
+
+## Pendiente (fase 2)
+
+Generar un **programa `.exe`** con el código del alumno desde el navegador aún no está
+disponible.

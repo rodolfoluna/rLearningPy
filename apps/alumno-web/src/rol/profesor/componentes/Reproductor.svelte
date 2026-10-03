@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Vuelve a escribir, tecla a tecla, el código de una actividad a partir del historial firmado.
+  // Vuelve a escribir, tecla a tecla, el código de una actividad a partir de su historial de edición.
   import { crearVisor, type EditorCodigo } from "@rlp/editor";
   import { onDestroy, onMount } from "svelte";
   import type { LineaDeTiempo, Marca } from "../lib/tipos";
@@ -281,9 +281,9 @@
     <span class="espaciador"></span>
     {#if terminado}
       {#if coincide}
-        <span class="exito-msg" data-coincide>✔ El resultado coincide con el código entregado</span>
+        <span class="exito-msg" data-coincide>✔ El resultado coincide con el código guardado</span>
       {:else}
-        <span class="alerta">⚠ El resultado no coincide con el código entregado</span>
+        <span class="alerta">⚠ El resultado no coincide con el código guardado</span>
       {/if}
     {/if}
   </div>

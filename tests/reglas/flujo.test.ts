@@ -2,7 +2,10 @@
 // configurar profesor → grupo → alta de alumno → login con número de control → cambio de
 // contraseña obligatorio → restablecer → login del profesor desde la pantalla común.
 import {
+  calificar,
   configurarProfesor,
+  eliminarAlumno,
+  eliminarGrupo,
   crearAlumno,
   guardarGrupo,
   hayProfesor,
@@ -101,8 +104,23 @@ describe("cuentas de profesor y alumnos", () => {
     expect(s2).toMatchObject({ rol: "alumno", alumnoId: cred.alumnoId });
     expect((await getDoc(doc(otra.db, rutas.actividad(cred.alumnoId, "u0-hola")))).data()?.completada).toBe(true);
 
+    // Nota del profesor: el alumno la ve en su actividad; el resumen guarda una copia.
+    await calificar(cred.alumnoId, "u0-hola", { calificacion: 9, comentario: "Bien" }, profe);
+    expect((await getDoc(doc(otra.db, rutas.actividad(cred.alumnoId, "u0-hola")))).data()?.nota).toMatchObject({
+      calificacion: 9,
+      comentario: "Bien",
+    });
+    expect((await getDoc(doc(profe.db, rutas.contadores(cred.alumnoId)))).data()?.notas?.["u0-hola"]?.calificacion).toBe(9);
+
     // El profesor entra desde la misma pantalla, con su correo.
     const p2 = instancia();
     expect(await iniciarSesion("profe@escuela.mx", "profe-12345", p2)).toMatchObject({ rol: "profesor" });
+
+    // Borrar el grupo deja al alumno sin grupo; borrar al alumno quita su acceso y su progreso.
+    await eliminarGrupo(grupo, profe);
+    expect((await leer(profe.db)).grupo).toBeNull();
+    await eliminarAlumno(cred.alumnoId, profe);
+    expect((await getDoc(doc(profe.db, rutas.alumno(cred.alumnoId)))).exists()).toBe(false);
+    await expect(iniciarSesion("21340500", nueva.clave, instancia())).rejects.toThrow();
   });
 });

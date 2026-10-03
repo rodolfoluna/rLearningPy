@@ -1,0 +1,46 @@
+name: Publicar reglas de Firestore
+
+# Publica firestore.rules y firestore.indexes.json en el proyecto de Firebase.
+# Se corre a mano (pestaña Actions → "Publicar reglas de Firestore" → Run workflow) o al cambiar
+# esos archivos en main.
+#
+# Requiere el secreto FIREBASE_SERVICE_ACCOUNT: la llave JSON de una cuenta de servicio con los
+# roles "Firebase Rules Admin" y "Cloud Datastore Index Admin" (ver docs/INSTALACION.md). Sin él,
+# publica las reglas desde tu computadora:  pnpm desplegar:reglas --project <id-del-proyecto>
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["firestore.rules", "firestore.indexes.json"]
+
+jobs:
+  reglas:
+    name: firebase deploy --only firestore:rules,firestore:indexes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CUENTA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      PROYECTO: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+    steps:
+      - name: Revisar los secretos
+        id: revisar
+        run: |
+          if [ -z "$CUENTA" ] || [ -z "$PROYECTO" ]; then
+            echo "::warning::Faltan FIREBASE_SERVICE_ACCOUNT o VITE_FIREBASE_PROJECT_ID: no se publican las reglas (usa pnpm desplegar:reglas)."
+            echo "listo=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "listo=1" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.revisar.outputs.listo == '1'
+      - uses: actions/setup-node@v4
+        if: steps.revisar.outputs.listo == '1'
+        with:
+          node-version: 22
+      - name: Publicar
+        if: steps.revisar.outputs.listo == '1'
+        run: |
+          printf '%s' "$CUENTA" > "$RUNNER_TEMP/cuenta.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/cuenta.json"
+          npx --yes firebase-tools@15 deploy --only firestore:rules,firestore:indexes --project "$PROYECTO" --non-interactive

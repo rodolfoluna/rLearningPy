@@ -38,46 +38,24 @@ importers:
       '@rlp/alumno-ui':
         specifier: workspace:*
         version: link:../../packages/alumno-ui
-      '@rlp/nube':
-        specifier: workspace:*
-        version: link:../../packages/nube
-      firebase:
-        specifier: ^12.3.0
-        version: 12.19.0
-    devDependencies:
-      '@sveltejs/vite-plugin-svelte':
-        specifier: ^6.2.0
-        version: 6.2.4(svelte@5.57.1)(vite@7.3.6(@types/node@26.6.4)(lightningcss@1.33.0)(yaml@2.9.1))
-      '@tsconfig/svelte':
-        specifier: ^5.0.4
-        version: 5.0.8
-      svelte:
-        specifier: ^5.39.0
-        version: 5.57.1
-      svelte-check:
-        specifier: ^4.3.0
-        version: 4.7.6(picomatch@4.0.7)(svelte@5.57.1)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.0
-        version: 5.9.3
-      vite:
-        specifier: ^7.1.0
-        version: 7.3.6(@types/node@26.6.4)(lightningcss@1.33.0)(yaml@2.9.1)
-
-  apps/profesor:
-    dependencies:
       '@rlp/curso':
         specifier: workspace:*
         version: link:../../packages/curso
       '@rlp/editor':
         specifier: workspace:*
         version: link:../../packages/editor
+      '@rlp/nube':
+        specifier: workspace:*
+        version: link:../../packages/nube
       '@rlp/python-worker':
         specifier: workspace:*
         version: link:../../packages/python-worker
       '@rlp/ui-comun':
         specifier: workspace:*
         version: link:../../packages/ui-comun
+      firebase:
+        specifier: ^12.3.0
+        version: 12.19.0
     devDependencies:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^6.2.0

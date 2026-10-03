@@ -70,12 +70,34 @@ export interface DocActividad {
   pistas: number;
   actualizado: number;
   /** Calificación/comentario del profesor (solo lo escribe el profesor). */
-  nota?: { calificacion: number | null; comentario: string; actualizado: number } | null;
+  nota?: NotaProfesor | null;
   /**
    * Historial de edición para la reproducción. Cada elemento es un `LoteEdiciones` en JSON
    * (Firestore no admite arreglos anidados). Se agrega con `arrayUnion`, en lotes de ~10 s.
    */
   ediciones?: string[];
+  /** Se dejó de guardar el historial porque el documento se acercaba a 1 MB. */
+  edicionesTruncadas?: boolean;
+}
+
+/** Calificación y comentario del profesor para una actividad. */
+export interface NotaProfesor {
+  calificacion: number | null;
+  comentario: string;
+  actualizado: number;
+}
+
+/**
+ * Resumen de una actividad dentro de `resumen/contadores.avance`: lo que necesita el tablero del
+ * profesor sin leer cada documento de actividad (cuota de lecturas del plan Spark).
+ */
+export interface ResumenAvance {
+  completada: boolean;
+  puntos: number;
+  pasadas: number;
+  total: number;
+  intentos: number;
+  actualizado: number;
 }
 
 /** Elemento (en JSON) de `DocActividad.ediciones`: el `LoteOperaciones` del editor. */
@@ -114,6 +136,10 @@ export interface DocContadores {
   global: Contadores;
   por_actividad: Record<string, Contadores>;
   actualizado: number;
+  /** Resumen por actividad (lo escribe la app del alumno junto con los contadores). */
+  avance?: Record<string, ResumenAvance>;
+  /** Copia de las notas del profesor (para el tablero y el CSV; solo la escribe el profesor). */
+  notas?: Record<string, NotaProfesor>;
 }
 
 /** usuarios/{uid} */
@@ -163,6 +189,20 @@ export const rutas = {
 
 /** Nombre de las subcolecciones de actividades (para `collectionGroup`). */
 export const COLECCION_ACTIVIDADES = "actividades";
+/** Subcolección del resumen de cada alumno (`collectionGroup("resumen")` en el tablero). */
+export const COLECCION_RESUMEN = "resumen";
+
+/** Resumen de avance de una actividad (para `DocContadores.avance`). */
+export function resumenAvance(a: Partial<DocActividad>): ResumenAvance {
+  return {
+    completada: !!a.completada,
+    puntos: a.puntos ?? 0,
+    pasadas: a.pasadas ?? 0,
+    total: a.total ?? 0,
+    intentos: a.intentos ?? 0,
+    actualizado: a.actualizado ?? 0,
+  };
+}
 
 export const DOMINIO_ALUMNOS = "alumnos.rlp.local";
 

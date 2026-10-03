@@ -4,7 +4,8 @@ rules_version = '2';
 //  - El profesor (config/app.profesorUid) lee y escribe todo. config/app solo se puede crear una
 //    vez: hay un único profesor.
 //  - Cada alumno lee y escribe solo alumnos/{suId}/**, con suId = usuarios/{uid}.alumnoId; de su
-//    documento alumnos/{suId} solo puede cambiar debeCambiarClave (a false) y ultimaSync.
+//    documento alumnos/{suId} solo puede cambiar debeCambiarClave (a false) y ultimaSync, y no puede
+//    escribir las notas del profesor.
 //  - logins/{control} es público (traduce el número de control al correo de acceso vigente).
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -49,12 +50,22 @@ service cloud.firestore {
 
       // Progreso (actividades, resumen/contadores). Ojo: {resto=**} solo, sin {subcoleccion},
       // también coincidiría con el propio alumnos/{alumnoId}.
+      // Las notas del profesor (`nota` en cada actividad, `notas` en el resumen) solo las escribe él.
       match /{subcoleccion}/{resto=**} {
-        allow read, write: if esAlumno(alumnoId) || esProfesor();
+        allow read: if esAlumno(alumnoId) || esProfesor();
+        allow create: if esProfesor()
+          || (esAlumno(alumnoId) && !request.resource.data.keys().hasAny(['nota', 'notas']));
+        allow update: if esProfesor()
+          || (esAlumno(alumnoId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['nota', 'notas']));
+        allow delete: if esProfesor();
       }
     }
 
-    // Tablero del profesor: collectionGroup('actividades').
+    // Tablero del profesor: collectionGroup('resumen') (avance y contadores de cada alumno) y
+    // collectionGroup('actividades').
+    match /{ruta=**}/resumen/{documento} {
+      allow read: if esProfesor();
+    }
     match /{ruta=**}/actividades/{actividadId} {
       allow read: if esProfesor();
     }

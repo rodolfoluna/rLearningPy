@@ -3,6 +3,43 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Las versiones
 siguen [SemVer](https://semver.org/lang/es/). El curso tiene su propia versión (`curso/curso.yaml`).
 
+## [0.3.0] — sin publicar
+
+Versión solo web: una app (PWA) para alumnos y profesor, con Firebase (Auth + Firestore, plan
+Spark) y publicada en GitHub Pages. Sin Rust, Tauri, Android ni archivos `.rlp`.
+
+### Área del profesor (dentro de la misma app)
+
+- **Tablero en tiempo real**: avance, puntos, actividades completadas, última sincronización y
+  semáforo de alertas (intentos de pegar, inserciones sospechosas, tiempo fuera); filtro por
+  grupo, búsqueda, orden por columna y mapa de actividades.
+- **Detalle por alumno**: estado por unidad, lección y actividad; código; contadores;
+  reproducción de la escritura desde el historial; volver a correr las pruebas en Pyodide;
+  calificación y comentario que el alumno ve en su actividad.
+- **Alumnos**: alta individual o en lote (pegar `control,nombre` o subir CSV), credenciales con
+  descarga en CSV e impresión de tarjetas, restablecer contraseña, editar y dar de baja.
+- **Grupos** con política de pegado (bloquear / solo lo propio) y registro de salidas.
+- **Exportar CSV** de avance (por alumno) y detallado (alumno × actividad).
+
+### Sincronización y cuotas
+
+- El alumno escribe un **resumen de avance** junto con sus contadores; el tablero lee un
+  documento por alumno en lugar de uno por actividad.
+- Intervalos más largos para no pasar de las 20 000 escrituras diarias de Spark: historial cada
+  30 s, contadores cada 60 s (al completar una actividad, al momento), `ultimaSync` cada 5 min.
+- Las reglas impiden que el alumno escriba las notas del profesor o borre su avance.
+
+### Publicación
+
+- `build-web.yml` compila con los secretos `VITE_FIREBASE_*` y publica en Pages en cada push a
+  `main`, con la ruta base configurable (`RLP_BASE`, por defecto `/<repositorio>/`).
+- `firebase-reglas.yml` y `pnpm desplegar:reglas` publican las reglas y los índices.
+- Se elimina `apps/profesor` (la app de escritorio).
+
+### Documentación
+
+- Guía de instalación paso a paso, manuales del profesor y del alumno, y diseño técnico nuevos.
+
 ## [0.2.1] — sin publicar
 
 ### Publicación desde la computadora

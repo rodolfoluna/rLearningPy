@@ -94,7 +94,7 @@ export function fusionar(local: EstadoActividad | undefined, remoto: EstadoActiv
     puntos: Math.max(local.puntos, remoto.puntos),
     intentos: Math.max(local.intentos, remoto.intentos),
     pistas: Math.max(local.pistas, remoto.pistas),
-    nota: remoto.nota ?? local.nota ?? null,
+    nota: remoto.nota ?? null, // solo la escribe el profesor: manda la nube (también al borrarla)
   };
 }
 

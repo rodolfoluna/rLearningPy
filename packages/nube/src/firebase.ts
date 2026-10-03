@@ -42,7 +42,7 @@ export function configuracionFirebase(): FirebaseOptions {
     cfg.authDomain ||= "localhost";
   }
   if (!cfg.apiKey || !cfg.projectId) {
-    throw new Error("Falta la configuración de Firebase (VITE_FIREBASE_API_KEY y VITE_FIREBASE_PROJECT_ID; ver .env.example).");
+    throw new Error("Falta la configuración de Firebase (VITE_FIREBASE_API_KEY y VITE_FIREBASE_PROJECT_ID; ver apps/alumno-web/.env.example y docs/INSTALACION.md).");
   }
   return cfg;
 }

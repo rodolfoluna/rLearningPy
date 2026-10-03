@@ -36,17 +36,11 @@ export default defineConfig({
           },
         ]
       : []),
-    {
-      command: "pnpm --filter @rlp/profesor exec vite --port 1421 --strictPort",
-      url: "http://localhost:1421",
-      reuseExistingServer: true,
-      timeout: 60_000,
-    },
   ],
   projects: [
     { name: "banco", testMatch: /banco\..*spec\.ts/, use: { baseURL: "http://localhost:5199" } },
     {
-      // Versión web (PWA) de la App Alumno.
+      // La app web (PWA): área del alumno y área del profesor.
       name: "web",
       testMatch: /web\..*spec\.ts/,
       use: { baseURL: "http://localhost:1422", viewport: { width: 1366, height: 800 } },
@@ -69,10 +63,5 @@ export default defineConfig({
           },
         ]
       : []),
-    {
-      name: "profesor",
-      testMatch: /profesor\..*spec\.ts/,
-      use: { baseURL: "http://localhost:1421", viewport: { width: 1440, height: 900 } },
-    },
   ],
 });
