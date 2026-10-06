@@ -42,6 +42,7 @@ export function filaDeAlumno(id: string, a: DocAlumno, r: Partial<DocContadores>
     debeCambiarClave: !!a.debeCambiarClave,
     creado: a.creado ?? 0,
     ultimaSync: Math.max(a.ultimaSync ?? 0, r?.actualizado ?? 0) || null,
+    conDatosMoviles: a.redUltimaSync === "celular",
     global: { ...vacio, ...r?.global },
     porActividad: Object.fromEntries(Object.entries(r?.por_actividad ?? {}).map(([k, v]) => [k, { ...vacio, ...v }])),
     avance: r?.avance ?? {},

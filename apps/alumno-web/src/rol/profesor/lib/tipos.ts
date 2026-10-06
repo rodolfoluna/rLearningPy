@@ -15,6 +15,8 @@ export interface AlumnoFila {
   creado: number;
   /** Última vez que su app estuvo en línea con todo enviado (o que llegaron sus contadores). */
   ultimaSync: number | null;
+  /** ¿El último envío del alumno fue con datos móviles? (lo marca su app: 📶 en el tablero) */
+  conDatosMoviles?: boolean;
   global: Contadores;
   porActividad: Record<string, Contadores>;
   avance: Record<string, ResumenAvance>;

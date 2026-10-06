@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ErrorPython, ResultadoEjecucion } from "@rlp/python-worker";
   import { tick } from "svelte";
-  import { avisar, python } from "../lib/app.svelte";
+  import { asegurarPython, avisar, python } from "../lib/app.svelte";
   import { sinPegar } from "../lib/sinPegar";
   import ErrorPy from "./ErrorPython.svelte";
 
@@ -64,7 +64,12 @@
   export async function ejecutar(codigo: string): Promise<ResultadoEjecucion> {
     limpiar();
     estado = "preparando";
-    await python.iniciar();
+    try {
+      await asegurarPython(); // con datos móviles y sin Python guardado, pregunta antes de descargar
+    } catch (e) {
+      estado = "inactiva";
+      throw e;
+    }
     estado = "corriendo";
     const t0 = performance.now();
     const r = await python.ejecutar(codigo, {

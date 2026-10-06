@@ -1,19 +1,27 @@
 <script lang="ts">
   import { app } from "../lib/app.svelte";
+  import { textoSync } from "../lib/sync";
 
-  const textos = {
-    "sin-conexion": { icono: "⚠", texto: "Sin conexión — cambios guardados en este equipo" },
-    sincronizando: { icono: "⟳", texto: "Sincronizando…" },
-    sincronizado: { icono: "✓", texto: "Sincronizado" },
+  // Al tocarlo se abre el menú donde está "Enviar ahora" y el ajuste de sincronización.
+  let { alTocar }: { alTocar?: () => void } = $props();
+
+  const iconos = {
+    "sin-conexion": "⚠",
+    sincronizando: "⟳",
+    sincronizado: "✓",
+    "pendiente-datos": "☁︎",
+    "enviando-datos": "⟳",
+    "en-pausa": "☁︎",
   } as const;
-  const actual = $derived(app.sincronizacion ? textos[app.sincronizacion] : null);
+  const texto = $derived(app.sincronizacion ? textoSync(app.sincronizacion, app.red) : "");
 </script>
 
-{#if actual}
-  <span class="sync" data-sync={app.sincronizacion} role="status" title={actual.texto}>
-    <span aria-hidden="true">{actual.icono}</span>
-    <span class="texto">{actual.texto}</span>
-  </span>
+{#if app.sincronizacion}
+  <button type="button" class="sync fantasma" data-sync={app.sincronizacion} title={texto} aria-label={`Sincronización: ${texto}`}
+    onclick={() => alTocar?.()}>
+    <span class="icono" aria-hidden="true">{iconos[app.sincronizacion]}</span>
+    <span class="texto" role="status">{texto}</span>
+  </button>
 {/if}
 
 <style>
@@ -23,10 +31,16 @@
     gap: 0.35em;
     font-size: 0.82em;
     padding: 0.15em 0.6em;
+    min-height: 0;
     border-radius: 999px;
     border: 1px solid var(--borde);
     white-space: nowrap;
     color: var(--texto-suave);
+    font-weight: normal;
+  }
+  .icono {
+    position: relative;
+    display: inline-block;
   }
   [data-sync="sin-conexion"] {
     background: var(--aviso-suave);
@@ -36,12 +50,49 @@
   [data-sync="sincronizado"] {
     color: var(--exito);
   }
+  /* Avances sin enviar con datos móviles: nube con un punto ámbar. */
+  [data-sync="pendiente-datos"] .icono::after {
+    content: "";
+    position: absolute;
+    right: -0.3em;
+    top: -0.1em;
+    width: 0.55em;
+    height: 0.55em;
+    border-radius: 50%;
+    background: var(--acento);
+    box-shadow: 0 0 0 1.5px var(--superficie);
+  }
+  [data-sync="pendiente-datos"] {
+    color: var(--aviso);
+  }
+  [data-sync="enviando-datos"] .icono {
+    animation: girar 1s linear infinite;
+  }
+  @keyframes girar {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-sync="enviando-datos"] .icono {
+      animation: none;
+    }
+  }
   @media (max-width: 900px) {
     .texto {
-      display: none;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
     }
     [data-sync="sin-conexion"] .texto {
-      display: inline;
+      position: static;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip-path: none;
     }
   }
 </style>

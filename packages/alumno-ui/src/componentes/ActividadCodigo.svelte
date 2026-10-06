@@ -6,20 +6,24 @@
   import { onDestroy, onMount } from "svelte";
   import { backend } from "../lib/backend";
   import { conDialogo, enDialogoNativo } from "../lib/dialogos";
-  import { crearEjecutable, guardarArchivo, limpiarNombre, nombreSugerido, obtenerLanzador } from "../lib/ejecutable";
+  import { crearEjecutable, guardarArchivo, lanzadorEnCache, limpiarNombre, nombreSugerido, obtenerLanzador, TAMANO_LANZADOR } from "../lib/ejecutable";
+  import { tipoRed } from "@rlp/nube/red";
   import {
     actualizarActividad,
     alCerrar,
     app,
+    asegurarPython,
     avisar,
     esTactil,
     politicaPegado,
     python,
+    pythonDisponible,
     refrescarEstadisticas,
     registrarEvento,
     registrarSalidas,
   } from "../lib/app.svelte";
   import Consola from "./Consola.svelte";
+  import DescargaPython from "./DescargaPython.svelte";
   import Pistas from "./Pistas.svelte";
   import Resultados from "./Resultados.svelte";
 
@@ -50,6 +54,8 @@
   let errorExe = $state("");
   let listoExe = $state("");
   let ayudaExe = $state(false);
+  /** ¿Hay que descargar el lanzador (≈13 MB)? Se avisa antes de hacerlo. */
+  let exeSinDescargar = $state(false);
 
   // svelte-ignore state_referenced_locally (el componente se recrea al cambiar de actividad)
   const id = actividad.id;
@@ -111,7 +117,7 @@
   function revisarSintaxis(texto: string) {
     if (temporizadorSintaxis) clearTimeout(temporizadorSintaxis);
     temporizadorSintaxis = setTimeout(async () => {
-      if (!editor || python.ocupado) return;
+      if (!editor || python.ocupado || !pythonDisponible()) return;
       const err = await python.sintaxis(texto).catch(() => null);
       if (!editor || editor.texto !== texto) return;
       if (err) editor.marcarError(err.linea, err.columna, `${err.explicacion} (${err.tipo}: ${err.mensaje})`);
@@ -233,7 +239,7 @@
     resultado = null;
     enCurso = [];
     try {
-      await python.iniciar();
+      await asegurarPython();
       const r = await python.probar(editor.texto, actividad.pruebas, (p) => (enCurso = [...enCurso, p]));
       resultado = r;
       await colaGuardado;
@@ -271,7 +277,9 @@
     errorExe = "";
     listoExe = "";
     ayudaExe = false;
+    exeSinDescargar = false;
     modalExe = true;
+    void lanzadorEnCache().then((si) => (exeSinDescargar = !si));
   }
 
   async function crearExe() {
@@ -283,7 +291,7 @@
     creandoExe = true;
     avanceExe = null;
     try {
-      const err = python.ocupado ? null : await python.sintaxis(texto).catch(() => null);
+      const err = python.ocupado || !pythonDisponible() ? null : await python.sintaxis(texto).catch(() => null);
       if (err) throw new Error(`Corrige primero el error de la línea ${err.linea}: ${err.explicacion}`);
       const nombre = limpiarNombre(nombreExe);
       const lanzador = await obtenerLanzador((f) => (avanceExe = f));
@@ -294,6 +302,7 @@
         await new Promise((r) => setTimeout(r, 300));
       });
       listoExe = archivo;
+      exeSinDescargar = false;
       void registrarEvento("ejecutable", id, { nombre, bytes: new TextEncoder().encode(texto).length });
       if (!leer("rlp-ayuda-exe")) {
         ayudaExe = true;
@@ -365,6 +374,7 @@
       </div>
     {/if}
     <div class="inferior">
+      <DescargaPython />
       <div class="tabs" role="tablist">
         <button role="tab" class:activa={pestana === "consola"} onclick={() => (pestana = "consola")}>Consola</button>
         <button role="tab" class:activa={pestana === "pruebas"} onclick={() => (pestana = "pruebas")}>
@@ -403,6 +413,12 @@
       <small class="suave">Se guardará como <code>{limpiarNombre(nombreExe)}.exe</code></small>
     {/if}
   </div>
+  {#if exeSinDescargar && avanceExe === null && !listoExe}
+    <p class="info" data-aviso-descarga-exe>
+      La primera vez se descargarán <strong>{TAMANO_LANZADOR}</strong> (el lanzador de Windows; luego queda guardado).
+      {#if tipoRed() === "celular"}<br /><strong>Estás usando datos móviles:</strong> si puedes, espera a tener Wi‑Fi.{/if}
+    </p>
+  {/if}
   {#if avanceExe !== null}
     <div class="avance" data-avance-exe>
       <progress max="1" value={avanceExe}></progress>

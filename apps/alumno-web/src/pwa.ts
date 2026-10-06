@@ -1,7 +1,12 @@
 // Lo propio de la app instalable: service worker (sin conexión y página aislada), versión nueva,
 // guardado persistente y ayuda para instalarla. Solo en la compilación publicada (no en `vite dev`).
+//
+// Con datos móviles (@rlp/nube/red) no se descarga nada pesado sin avisar: la precarga de Python
+// espera al Wi‑Fi y la versión nueva de la app también (ver `install` en sw.js); se puede pedir
+// con "Descargar ahora".
 
 import { avisar, prepararCierre } from "@rlp/alumno-ui";
+import { alCambiarRed, avisarRedAlServiceWorker, CACHE_RED, tipoRed } from "@rlp/nube/red";
 
 const esIos =
   /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -43,6 +48,7 @@ export async function prepararPwa(): Promise<boolean> {
     }
     // No se pudo instalar: la app sigue sin aislamiento (la consola avisa si input() no está).
   }
+  vigilarRed();
   vigilarVersiones(registro);
   void precargar();
   void navigator.storage?.persist?.().catch(() => false);
@@ -64,8 +70,30 @@ function primeraInstalacion(registro: ServiceWorkerRegistration): Promise<boolea
   });
 }
 
-/** Descarga Pyodide en segundo plano para que Python funcione sin conexión. */
+/** El service worker no siempre ve el tipo de red: la página se lo dice (ver sw.js). */
+function vigilarRed() {
+  void avisarRedAlServiceWorker();
+  alCambiarRed((t) => void avisarRedAlServiceWorker(t));
+}
+
+/** Espera (sin bloquear) a que la red no sea de datos móviles. */
+function sinDatosMoviles(): Promise<void> {
+  if (tipoRed() !== "celular") return Promise.resolve();
+  return new Promise((listo) => {
+    const quitar = alCambiarRed((t) => {
+      if (t === "celular") return;
+      quitar();
+      listo();
+    });
+  });
+}
+
+/**
+ * Descarga Pyodide en segundo plano para que Python funcione sin conexión. Con datos móviles espera
+ * al Wi‑Fi (si el alumno necesita Python antes, la app le pregunta: ver DescargaPython.svelte).
+ */
 async function precargar() {
+  await sinDatosMoviles();
   const registro = await navigator.serviceWorker.ready;
   navigator.serviceWorker.addEventListener("message", (e: MessageEvent) => {
     if (e.data?.tipo !== "precarga" || e.data.hechos !== e.data.total) return;
@@ -93,8 +121,38 @@ function vigilarVersiones(registro: ServiceWorkerRegistration) {
       if (nuevo.state === "installed" && navigator.serviceWorker.controller) ofrecer(nuevo);
     });
   });
-  // Revisa si hay versión nueva cada hora mientras la app está abierta.
-  setInterval(() => void registro.update().catch(() => undefined), 60 * 60 * 1000);
+  // Revisa si hay versión nueva cada hora mientras la app está abierta (con datos móviles, no) y
+  // al pasar a Wi‑Fi (por si se pospuso).
+  const revisar = () => void registro.update().catch(() => undefined);
+  setInterval(() => tipoRed() !== "celular" && revisar(), 60 * 60 * 1000);
+  alCambiarRed((t) => t !== "celular" && revisar());
+
+  // Con datos móviles el service worker no descarga la versión nueva (ver sw.js) y avisa: se ofrece
+  // descargarla de todos modos, una vez por sesión.
+  navigator.serviceWorker.addEventListener("message", (e: MessageEvent) => {
+    if (e.data?.tipo !== "actualizacion-pospuesta" || leer(sessionStorage, "rlp-actualizacion-pospuesta")) return;
+    guardar(sessionStorage, "rlp-actualizacion-pospuesta", "1");
+    barra(
+      "Hay una versión nueva de la app (≈2 MB). Se descargará cuando tengas Wi‑Fi.",
+      "Descargar ahora",
+      async () => {
+        await permitirActualizacion();
+        revisar();
+      },
+    );
+  });
+  // Con datos móviles se pregunta una vez al abrir (solo baja sw.js, unos KB) para poder avisar.
+  if (tipoRed() === "celular") revisar();
+}
+
+/** Deja que el service worker descargue la versión nueva aunque haya datos móviles (una vez). */
+async function permitirActualizacion() {
+  try {
+    const c = await caches.open(CACHE_RED);
+    await c.put("permiso-actualizar", new Response(String(Date.now())));
+  } catch {
+    /* sin Cache Storage */
+  }
 }
 
 interface EventoInstalar extends Event {

@@ -94,6 +94,16 @@ describe("alumnos", () => {
     await assertFails(updateDoc(doc(db, "alumnos/ana"), { debeCambiarClave: true }));
   });
 
+  it("el alumno marca la red de su última sincronización (wifi, celular o desconocida)", async () => {
+    const db = alumno("uid-ana");
+    await assertSucceeds(updateDoc(doc(db, "alumnos/ana"), { ultimaSync: 124, redUltimaSync: "celular" }));
+    await assertSucceeds(updateDoc(doc(db, "alumnos/ana"), { ultimaSync: 125, redUltimaSync: "wifi" }));
+    await assertSucceeds(updateDoc(doc(db, "alumnos/ana"), { redUltimaSync: "desconocida" }));
+    await assertFails(updateDoc(doc(db, "alumnos/ana"), { redUltimaSync: "5g" }));
+    await assertFails(updateDoc(doc(db, "alumnos/ana"), { redUltimaSync: true }));
+    await assertFails(updateDoc(doc(db, "alumnos/ana"), { redUltimaSync: "wifi", nombre: "Otra" }));
+  });
+
   it("el alumno lee su usuario y su grupo, no otros; no escribe usuarios ni grupos", async () => {
     const db = alumno("uid-ana");
     await assertSucceeds(getDoc(doc(db, "usuarios/uid-ana")));

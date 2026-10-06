@@ -137,7 +137,8 @@
         <h1>{a.nombre}</h1>
         <span class="suave">
           {a.control} · {nombreGrupo(a.grupo)} · {completadas(a)}/{actividades.length} actividades · {puntos(a)} puntos ·
-          última sincronización: {a.ultimaSync ? fecha(a.ultimaSync) : "nunca"}
+          última sincronización: {a.ultimaSync ? fecha(a.ultimaSync) : "nunca"}{#if a.ultimaSync && a.conDatosMoviles}
+            <span title="Con datos móviles: su app envía los avances con Wi‑Fi o cuando el alumno lo pide">📶</span>{/if}
         </span>
       </div>
       <span class="espaciador"></span>

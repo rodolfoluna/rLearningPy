@@ -4,8 +4,20 @@
 //  - Cualquier número de control con la contraseña temporal `gato-1234`: entra como alumno nuevo
 //    y debe cambiar la contraseña.
 //  - `profesor@demo.local` / `profesor-demo`: entra al área del profesor.
-// Con `?sin-conexion` el indicador muestra "Sin conexión".
+// Con `?sin-conexion` el indicador muestra "Sin conexión". Con `?red=celular` (o `wifi`,
+// `desconocida`) se simula el tipo de red: con datos móviles los cambios quedan "sin enviar" hasta
+// tocar "Enviar ahora" o pasar a Wi‑Fi; `?pendientes-desde=<horas>` simula avances viejos sin enviar.
 
+import {
+  alCambiarRed,
+  calcularEstadoSync,
+  decidirSync,
+  leerAjusteSync,
+  guardarAjusteSync,
+  simularRed,
+  tipoRed,
+  type TipoRed,
+} from "@rlp/nube/red";
 import type { Backend } from "./backend";
 import * as progreso from "./progreso";
 import {
@@ -60,8 +72,38 @@ export function crearBackendSimulado(): Backend {
     return copia(e);
   };
   const retrasar = <T>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 30));
+
+  // Red simulada y política de sincronización (la misma regla que el núcleo con Firebase).
+  const params = new URLSearchParams(location.search);
+  const redPedida = params.get("red");
+  if (redPedida === "celular" || redPedida === "wifi" || redPedida === "desconocida") simularRed(redPedida as TipoRed);
+  let ajuste = leerAjusteSync();
+  let tipo = tipoRed();
+  let pendientesDesde: number | null = null;
+  let enviando = false;
+  const pausada = () => !!actual && decidirSync(ajuste, tipo) === "preguntar";
   const estadoSync = (): EstadoSincronizacion =>
-    new URLSearchParams(location.search).has("sin-conexion") ? "sin-conexion" : "sincronizado";
+    calcularEstadoSync({
+      enLinea: !params.has("sin-conexion"),
+      pausada: pausada(),
+      enviando,
+      pendiente: pendientesDesde !== null,
+    });
+  const avisarSync = () => {
+    if (!actual) return;
+    const e = estadoSync();
+    sincronizacion.forEach((f) => f(e));
+  };
+  /** Un cambio "se guarda": con la red en pausa queda pendiente; si no, se envía al momento. */
+  const escribio = () => {
+    if (pausada()) pendientesDesde ??= Date.now();
+    avisarSync();
+  };
+  alCambiarRed((t) => {
+    tipo = t;
+    if (!pausada()) pendientesDesde = null;
+    avisarSync();
+  });
 
   return {
     estadoApp: async () => ({
@@ -95,7 +137,9 @@ export function crearBackendSimulado(): Backend {
       if (!c || c.clave !== clave) throw new Error("Número de control o contraseña incorrectos.");
       actual = c;
       registrar("sesion_inicio", null);
-      sincronizacion.forEach((f) => f(estadoSync()));
+      const horas = Number(params.get("pendientes-desde"));
+      if (horas > 0 && pausada()) pendientesDesde = Date.now() - horas * 3600_000;
+      avisarSync();
       return retrasar({ rol: "alumno" as const, estado: copia(c.alumno) });
     },
     async configurarProfesor(correo, clave) {
@@ -117,26 +161,31 @@ export function crearBackendSimulado(): Backend {
     },
     cerrarSesion: async () => {
       actual = null;
+      pendientesDesde = null;
     },
     estado: async () => copia(sesion()),
     estadisticas: async () => copia(est()),
     async abrirActividad(id, codigoInicial) {
       registrar("actividad_abierta", id);
+      escribio();
       return guardar(id, progreso.abrirActividad(sesion().actividades[id], codigoInicial));
     },
     async guardarEdicion(id, lote, texto) {
       const r = progreso.guardarEdicion(act(id), lote.ops, texto);
       guardar(id, r.estado);
       registrar("edicion", id, { ops: lote.ops });
+      escribio();
       return r.resultado;
     },
     reiniciarActividad: async (id, codigoInicial) => guardar(id, progreso.reiniciarActividad(act(id), codigoInicial)),
     async registrarPruebas(id, pasadas, total, puntos) {
       registrar("prueba", id, { pasadas, total });
+      escribio();
       return guardar(id, progreso.registrarPruebas(act(id), pasadas, total, puntos));
     },
     async registrarRespuesta(id, respuesta, correcta, puntos) {
       registrar("respuesta", id, { correcta });
+      escribio();
       return guardar(id, progreso.registrarRespuesta(act(id), respuesta, correcta, puntos));
     },
     async registrarPista(id, numero) {
@@ -150,5 +199,22 @@ export function crearBackendSimulado(): Backend {
       return () => sincronizacion.delete(fn);
     },
     alCambiarAlumno: () => () => undefined,
+    infoRed: () => ({ tipo, ajuste, pendientesDesde }),
+    cambiarAjusteSync(a) {
+      ajuste = a;
+      guardarAjusteSync(a);
+      if (!pausada()) pendientesDesde = null;
+      avisarSync();
+    },
+    enviarAhora() {
+      if (!pausada() || enviando) return;
+      enviando = true;
+      avisarSync();
+      setTimeout(() => {
+        enviando = false;
+        pendientesDesde = null;
+        avisarSync();
+      }, 800);
+    },
   };
 }

@@ -86,6 +86,13 @@ El avance llega cuando el alumno termina una actividad (al momento si tiene red)
 cada minuto mientras trabaja. Un alumno que trabajó sin conexión aparece al día en cuanto su
 equipo recupera la red y abre la app.
 
+**Celulares con datos móviles:** para cuidar el saldo de los alumnos, en Android la app envía
+sola con Wi‑Fi y, con datos móviles, espera a que el alumno toque **Enviar ahora** (ver el
+manual del alumno). Su avance puede llegar más tarde: se guarda en el teléfono y llega al
+conectarse a Wi‑Fi. Un **📶** junto a "última sincronización" indica que su último envío fue con
+datos móviles. Si necesitas el avance en clase, pide que toquen "Enviar ahora" o que usen el
+Wi‑Fi de la escuela.
+
 ### Semáforo de alertas
 
 | Color | Significa |

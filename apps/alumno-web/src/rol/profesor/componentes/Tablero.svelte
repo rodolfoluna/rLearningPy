@@ -175,7 +175,11 @@
                 <td class="num">{a.global.ejecuciones}</td>
                 <td class="num" class:alerta={a.global.pegados_intentos > 0}>{a.global.pegados_intentos}</td>
                 <td class="num">{a.global.salidas}</td>
-                <td>{a.ultimaSync ? fecha(a.ultimaSync) : "nunca"}</td>
+                <td>
+                  {a.ultimaSync ? fecha(a.ultimaSync) : "nunca"}
+                  {#if a.ultimaSync && a.conDatosMoviles}<span class="datos-moviles" data-datos-moviles
+                      title="Su último envío fue con datos móviles: su app envía los avances con Wi‑Fi o cuando el alumno lo pide">📶</span>{/if}
+                </td>
               {/if}
             </tr>
           {/each}
@@ -190,6 +194,10 @@
 </div>
 
 <style>
+  .datos-moviles {
+    font-size: 0.85em;
+    cursor: help;
+  }
   .resumen {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

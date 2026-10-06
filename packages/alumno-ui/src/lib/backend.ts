@@ -11,6 +11,8 @@ import type {
   EstadoApp,
   EstadoSincronizacion,
   Estadisticas,
+  AjusteSync,
+  InfoRed,
   ResultadoGuardado,
   SesionIniciada,
 } from "./tipos";
@@ -42,6 +44,15 @@ export interface Backend {
   alSincronizar(fn: (estado: EstadoSincronizacion) => void): () => void;
   /** Avisa cuando llegan cambios de otro equipo o del profesor (actividades, grupo). */
   alCambiarAlumno(fn: (estado: EstadoAlumno) => void): () => void;
+  /**
+   * Red y ajuste de sincronización (datos móviles). Cambia junto con el estado que avisa
+   * `alSincronizar`. Opcional: un núcleo sin política de red sincroniza siempre.
+   */
+  infoRed?(): InfoRed;
+  /** Cambia el ajuste de sincronización de este dispositivo. */
+  cambiarAjusteSync?(ajuste: AjusteSync): void;
+  /** "Enviar ahora": envía lo pendiente aunque sea con datos móviles y vuelve a pausar. No espera. */
+  enviarAhora?(): void;
 }
 
 let proveedor: (() => Promise<Backend>) | null = null;

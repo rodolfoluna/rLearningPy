@@ -71,6 +71,7 @@ export function crearDatosSimulados(): DatosProfesor {
         debeCambiarClave,
         creado: ahora - 20 * 24 * 60 * MIN,
         ultimaSync: debeCambiarClave ? null : ahora - n * 7 * MIN,
+        conDatosMoviles: n % 4 === 2, // algunos envían con datos móviles (📶)
         global: contadoresVacios(),
         porActividad: {},
         avance: {},

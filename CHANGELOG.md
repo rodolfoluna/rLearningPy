@@ -5,6 +5,25 @@ siguen [SemVer](https://semver.org/lang/es/). El curso tiene su propia versión 
 
 ## [Sin publicar]
 
+### Celulares: sincronizar con Wi‑Fi y preguntar con datos móviles
+
+- Con sesión de alumno, la red de Firestore se pausa (`disableNetwork`) cuando la red es de datos
+  móviles (`navigator.connection.type`, Chrome para Android; el Ahorro de datos cuenta como datos).
+  Lo escrito se guarda en la caché persistente y sale al pasar a Wi‑Fi o con **Enviar ahora**
+  (un toque; vuelve a pausar al confirmar). Red desconocida (iPhone, escritorio) = Wi‑Fi.
+- Indicador: nube con punto ámbar (avances sin enviar), "Enviando con datos móviles…", "Al día";
+  al tocarlo abre el menú con **Enviar ahora** y el ajuste **Sincronización** (Automática en
+  Wi‑Fi / Siempre automática / Solo cuando yo lo pida; por dispositivo). Recordatorio suave, una
+  vez por sesión, si hay avances de más de 24 h sin enviar.
+- Entrar, la contraseña inicial y cerrar sesión usan la red siempre.
+- Descargas pesadas con datos móviles: Python (≈12 MB) pregunta antes de descargarse; la
+  precarga sin conexión y la versión nueva de la app (service worker) esperan al Wi‑Fi (o
+  "Descargar ahora"); el diálogo del `.exe` avisa los ≈13 MB del lanzador.
+- Profesor: 📶 junto a la última sincronización si el último envío fue con datos móviles
+  (`alumnos/{id}.redUltimaSync`, permitido en las reglas).
+- Nuevo `@rlp/nube/red` (tipo de red y política, con pruebas) y `?red=celular` en el núcleo
+  simulado.
+
 ### Programas `.exe` desde el navegador (fase 2)
 
 - Botón **⚙ Crear programa .exe** en las actividades de código: pide el nombre (se limpia para

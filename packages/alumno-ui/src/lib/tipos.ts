@@ -1,5 +1,7 @@
 // Tipos que comparten la interfaz del alumno y su núcleo (Firebase o simulado).
 
+import type { AjusteSync, EstadoSync, InfoRed, TipoRed } from "@rlp/nube/red";
+
 export interface PerfilPublico {
   /** ID estable del alumno (alumnos/{alumnoId}). */
   perfil_id: string;
@@ -87,8 +89,9 @@ export interface ResultadoGuardado {
 /** Resultado del login de la pantalla común. */
 export type SesionIniciada = { rol: "alumno"; estado: EstadoAlumno } | { rol: "profesor" };
 
-/** Estado de la sincronización con la nube (indicador en la barra). */
-export type EstadoSincronizacion = "sin-conexion" | "sincronizando" | "sincronizado";
+/** Estado de la sincronización con la nube (indicador en la barra). Ver @rlp/nube/red. */
+export type EstadoSincronizacion = EstadoSync;
+export type { AjusteSync, InfoRed, TipoRed };
 
 export function contadoresVacios(): Contadores {
   return {

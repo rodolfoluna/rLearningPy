@@ -18,6 +18,7 @@
   "dependencies": {
     "@rlp/curso": "workspace:*",
     "@rlp/editor": "workspace:*",
+    "@rlp/nube": "workspace:*",
     "@rlp/python-worker": "workspace:*",
     "@rlp/ui-comun": "workspace:*"
   },

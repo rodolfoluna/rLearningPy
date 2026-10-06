@@ -13,6 +13,8 @@ export const CACHE_LANZADOR = "rlp-lanzador";
 /** Rutas relativas a la página. */
 export const RUTA_LANZADOR = "lanzador/rlp-lanzador.exe";
 export const RUTA_INFO = "lanzador/lanzador.json";
+/** Tamaño aproximado del lanzador, para avisar antes de descargarlo. */
+export const TAMANO_LANZADOR = "≈13 MB";
 
 const codificador = new TextEncoder();
 
@@ -114,6 +116,17 @@ async function descargar(url: string, tamano: number, alAvance: (fraccion: numbe
     i += t.length;
   }
   return r2.buffer;
+}
+
+/** ¿El lanzador ya está guardado en este equipo? (si no, crear el .exe lo descarga). */
+export async function lanzadorEnCache(): Promise<boolean> {
+  try {
+    if (!("caches" in globalThis)) return false;
+    const cache = await caches.open(CACHE_LANZADOR);
+    return !!(await cache.match(new URL(RUTA_LANZADOR, document.baseURI).href));
+  } catch {
+    return false;
+  }
 }
 
 /**

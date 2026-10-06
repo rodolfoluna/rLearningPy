@@ -88,7 +88,12 @@ const TIPOS: Record<string, string> = {
  * Sirve apps/alumno-web/dist como lo haría GitHub Pages de proyecto: archivos estáticos bajo
  * una subcarpeta (`/rlp/`) y sin encabezados COOP/COEP.
  */
-export async function servirDist(dist: string, prefijo = "/rlp/"): Promise<{ base: string; servidor: Server; cerrar: () => Promise<void> }> {
+export async function servirDist(
+  dist: string,
+  prefijo = "/rlp/",
+  /** Cambia un archivo al servirlo (p. ej. sw.js, para simular una versión nueva). */
+  transformar?: (ruta: string, datos: Buffer) => Buffer | string,
+): Promise<{ base: string; servidor: Server; cerrar: () => Promise<void> }> {
   const servidor = createServer((pedido, respuesta) => {
     const ruta = decodeURIComponent(new URL(pedido.url ?? "/", "http://x").pathname);
     let archivo = resolve(dist, "." + ruta.slice(prefijo.length - 1));
@@ -96,7 +101,8 @@ export async function servirDist(dist: string, prefijo = "/rlp/"): Promise<{ bas
     if (existsSync(archivo) && statSync(archivo).isDirectory()) archivo = join(archivo, "index.html");
     if (!existsSync(archivo)) return void respuesta.writeHead(404).end();
     respuesta.writeHead(200, { "Content-Type": TIPOS[extname(archivo)] ?? "application/octet-stream" });
-    respuesta.end(readFileSync(archivo));
+    const datos = readFileSync(archivo);
+    respuesta.end(transformar ? transformar(ruta.slice(prefijo.length), datos) : datos);
   });
   await new Promise<void>((listo) => servidor.listen(0, "127.0.0.1", listo));
   return {

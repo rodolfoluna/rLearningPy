@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Cliente Firebase compartido (Auth + Firestore con caché sin conexión) para las apps de alumno y profesor.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./red": "./src/red.ts"
   },
   "dependencies": {
     "firebase": "^12.3.0"

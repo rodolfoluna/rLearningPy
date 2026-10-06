@@ -3,9 +3,10 @@
 import type { Curso } from "@rlp/curso";
 import cursoJson from "@rlp/curso/alumno.json";
 import type { PoliticaPegado } from "@rlp/editor";
+import { alCambiarRed, tipoRed } from "@rlp/nube/red";
 import { EjecutorPython, type OpcionesEjecutor } from "@rlp/python-worker";
 import { backend } from "./backend";
-import type { EstadoActividad, EstadoAlumno, EstadoApp, EstadoSincronizacion, SesionIniciada } from "./tipos";
+import type { AjusteSync, EstadoActividad, EstadoAlumno, EstadoApp, EstadoSincronizacion, InfoRed, SesionIniciada } from "./tipos";
 
 export const curso = cursoJson as Curso;
 
@@ -22,6 +23,10 @@ export const app = $state({
   seleccion: { tipo: "inicio" } as Seleccion,
   aviso: "" as string,
   sincronizacion: null as EstadoSincronizacion | null,
+  /** Red, ajuste de sincronización y pendientes (si el núcleo los maneja). */
+  red: null as InfoRed | null,
+  /** Python aún no está descargado, la red es de datos móviles y algo lo necesita: se pregunta. */
+  pythonEnEspera: false,
   tema: (localStorageSeguro("rlp-tema") ?? "sistema") as "sistema" | "claro" | "oscuro",
 });
 
@@ -64,8 +69,86 @@ export function entrar(estado: EstadoAlumno) {
   app.alumno = estado;
   app.seleccion = { tipo: "inicio" };
   app.vista = estado.debe_cambiar_clave ? "cambiar-clave" : "principal";
-  void python.iniciar().catch(() => undefined);
+  // Python se prepara en segundo plano, salvo que haya que descargarlo con datos móviles.
+  void puedeDescargarPython().then((si) => {
+    if (si) void python.iniciar().catch(() => undefined);
+  });
 }
+
+// ------------------------------------------------------------ Python con datos móviles
+
+/** Tamaño aproximado de Python (Pyodide) para los avisos. */
+export const TAMANO_PYTHON = "≈12 MB";
+let pythonAprobado = false;
+let esperasPython: { si: () => void; no: (e: Error) => void }[] = [];
+
+/** ¿Python ya está guardado en este equipo? (lo guarda el service worker). */
+async function pythonEnCache(): Promise<boolean> {
+  try {
+    if (!("caches" in globalThis)) return false;
+    const base = opcionesPython.indexURL;
+    const [wasm, stdlib] = await Promise.all([
+      caches.match(new URL("pyodide.asm.wasm", base).href),
+      caches.match(new URL("python_stdlib.zip", base).href),
+    ]);
+    return !!wasm && !!stdlib;
+  } catch {
+    return false;
+  }
+}
+
+/** ¿Se puede descargar (o ya está) Python sin preguntar? Con datos móviles y sin caché, no. */
+export async function puedeDescargarPython(): Promise<boolean> {
+  if (pythonAprobado || python.version || tipoRed() !== "celular") return true;
+  return pythonEnCache();
+}
+
+let pythonGuardado = false;
+void pythonEnCache().then((si) => (pythonGuardado = si));
+
+/**
+ * ¿Se puede usar Python sin preguntar? (revisar la sintaxis mientras se escribe no debe descargar
+ * 12 MB con datos móviles).
+ */
+export function pythonDisponible(): boolean {
+  return pythonAprobado || !!python.version || pythonGuardado || tipoRed() !== "celular";
+}
+
+/**
+ * Inicia Python. Si hay que descargarlo con datos móviles, muestra la pregunta ("Descargar con
+ * datos móviles" / "Esperar a Wi‑Fi") y espera la respuesta; al pasar a Wi‑Fi sigue sola.
+ */
+export async function asegurarPython(): Promise<void> {
+  if (!(await puedeDescargarPython())) {
+    app.pythonEnEspera = true;
+    await new Promise<void>((si, no) => esperasPython.push({ si, no }));
+  }
+  await python.iniciar();
+}
+
+function responderPython(error: Error | null) {
+  const esperas = esperasPython;
+  esperasPython = [];
+  app.pythonEnEspera = false;
+  for (const e of esperas) error ? e.no(error) : e.si();
+}
+
+/** "Descargar Python con datos móviles". */
+export function aprobarDescargaPython() {
+  pythonAprobado = true;
+  responderPython(null);
+}
+
+/** "Esperar a Wi‑Fi": lo que esperaba a Python se cancela; con Wi‑Fi se descarga solo. */
+export function esperarWifiPython() {
+  responderPython(new Error("Python se descargará cuando te conectes a Wi‑Fi."));
+}
+
+alCambiarRed((t) => {
+  if (t === "celular") return;
+  if (esperasPython.length) responderPython(null);
+  if (app.alumno) void python.iniciar().catch(() => undefined);
+});
 
 /** Lleva a cada quien a su área tras iniciar sesión (o reanudar la sesión guardada). */
 export function entrarSesion(s: SesionIniciada) {
@@ -84,7 +167,10 @@ export async function escucharNucleo() {
   const b = await backend();
   quitarEscuchas.forEach((f) => f());
   quitarEscuchas = [
-    b.alSincronizar((e) => (app.sincronizacion = e)),
+    b.alSincronizar((e) => {
+      app.sincronizacion = e;
+      app.red = b.infoRed?.() ?? null;
+    }),
     b.alCambiarAlumno((e) => {
       if (!app.alumno || app.alumno.perfil.perfil_id !== e.perfil.perfil_id) return;
       app.alumno.grupo = e.grupo;
@@ -92,6 +178,17 @@ export async function escucharNucleo() {
       for (const [id, a] of Object.entries(e.actividades)) app.alumno.actividades[id] = a;
     }),
   ];
+}
+
+/** "Enviar ahora" (con datos móviles): no espera, el indicador muestra el avance. */
+export async function enviarAhora() {
+  (await backend()).enviarAhora?.();
+}
+
+export async function cambiarAjusteSync(a: AjusteSync) {
+  const b = await backend();
+  b.cambiarAjusteSync?.(a);
+  app.red = b.infoRed?.() ?? null;
 }
 
 export async function salir() {

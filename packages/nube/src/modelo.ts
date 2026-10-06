@@ -38,7 +38,7 @@ export interface DocGrupo {
   creado?: number;
 }
 
-/** alumnos/{alumnoId}. El alumno solo puede cambiar `debeCambiarClave` (a false) y `ultimaSync`. */
+/** alumnos/{alumnoId}. El alumno solo puede cambiar `debeCambiarClave` (a false), `ultimaSync` y `redUltimaSync`. */
 export interface DocAlumno {
   nombre: string;
   control: string;
@@ -54,6 +54,8 @@ export interface DocAlumno {
   creado: number;
   /** Última vez que la app del alumno estuvo en línea con todo enviado (ms) o null. */
   ultimaSync: number | null;
+  /** Red de ese último envío (lo escribe el alumno junto con `ultimaSync`). */
+  redUltimaSync?: "wifi" | "celular" | "desconocida";
 }
 
 /** alumnos/{alumnoId}/actividades/{actividadId} */

@@ -2,3 +2,4 @@ export { app, auth, configuracionFirebase, crearAppSecundaria, db, usaEmulador }
 export * from "./modelo";
 export * from "./sesion";
 export * from "./profesor";
+export * from "./red";

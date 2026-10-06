@@ -129,6 +129,9 @@ describe("informes", () => {
 
   it("filaDeAlumno une alumno y resumen", () => {
     expect(fila.ultimaSync).toBe(9);
+    expect(fila.conDatosMoviles).toBe(false);
+    const movil = filaDeAlumno("x2", { ...{ nombre: "Beto", control: "22", grupo: "g1", uidActual: "u2", correo: "", alias: [], debeCambiarClave: false, creado: 1, ultimaSync: 5 }, redUltimaSync: "celular" }, undefined);
+    expect(movil.conDatosMoviles).toBe(true);
     expect(fila.global.tiempo_ms).toBe(0);
     expect(completadas(fila)).toBe(1);
     expect(puntos(fila)).toBe(10);

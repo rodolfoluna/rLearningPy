@@ -1,8 +1,10 @@
 <script lang="ts">
   import { Modal, mensajeError } from "@rlp/ui-comun";
   import { backend } from "../lib/backend";
-  import { app, aplicarTema, avisar, curso, salir } from "../lib/app.svelte";
+  import { app, aplicarTema, avisar, curso, enviarAhora, salir } from "../lib/app.svelte";
+  import { haceCuanto, RECORDATORIO_MS } from "../lib/sync";
   import IndicadorSync from "./IndicadorSync.svelte";
+  import PanelSync from "./PanelSync.svelte";
   import Temario from "./Temario.svelte";
   import Bienvenida from "./Bienvenida.svelte";
   import Leccion from "./Leccion.svelte";
@@ -51,6 +53,46 @@
     menuAbierto = false;
   }
 
+  // El indicador de sincronización abre el menú donde está "Enviar ahora" y el ajuste.
+  function abrirSync() {
+    let celular = false;
+    try {
+      celular = matchMedia("(max-width: 600px)").matches;
+    } catch {
+      /* sin matchMedia */
+    }
+    if (celular) {
+      temarioAbierto = true;
+      lateral?.scrollTo({ top: 0 }); // "Enviar ahora" está arriba, con la cuenta
+    } else menuAbierto = !menuAbierto;
+  }
+
+  // Recordatorio suave (una vez por sesión): avances de hace más de 24 h sin enviar.
+  const CLAVE_RECORDATORIO = "rlp-recordatorio-sync";
+  let recordatorioCerrado = $state(leerSesion(CLAVE_RECORDATORIO) === "1");
+  const pendientesDesde = $derived(app.red?.pendientesDesde ?? null);
+  const recordatorio = $derived(
+    !recordatorioCerrado &&
+      app.sincronizacion === "pendiente-datos" &&
+      pendientesDesde !== null &&
+      Date.now() - pendientesDesde > RECORDATORIO_MS,
+  );
+  function leerSesion(clave: string): string | null {
+    try {
+      return sessionStorage.getItem(clave);
+    } catch {
+      return null;
+    }
+  }
+  function cerrarRecordatorio() {
+    recordatorioCerrado = true;
+    try {
+      sessionStorage.setItem(CLAVE_RECORDATORIO, "1");
+    } catch {
+      /* sin almacenamiento */
+    }
+  }
+
   function abrirClave() {
     menuAbierto = false;
     temarioAbierto = false;
@@ -86,7 +128,7 @@
       <span aria-hidden="true">🐍</span> <span class="titulo">{curso.titulo}</span>
     </button>
     <span class="espaciador"></span>
-    <IndicadorSync />
+    <IndicadorSync alTocar={abrirSync} />
     <button class="fantasma contadores" onclick={() => ir({ tipo: "estadisticas" })} title="Tus estadísticas (tu profesor también las ve)">
       <span class="insignia" data-contador="copias">📋 Copias <strong>{g.copias}</strong></span>
       <span class="insignia" class:alerta={g.pegados_intentos > 0} data-contador="pegados">🚫 Intentos de pegar <strong>{g.pegados_intentos}</strong></span>
@@ -100,6 +142,7 @@
       {#if menuAbierto}
         <div class="menu" role="menu">
           <div class="suave quien">{alumno.perfil.numero_control}{alumno.grupo ? ` · ${alumno.grupo.nombre}` : " · sin grupo"}</div>
+          <PanelSync id="sync-menu" />
           <button role="menuitem" onclick={() => { menuAbierto = false; ir({ tipo: "estadisticas" }); }}>📊 Mis estadísticas</button>
           <button role="menuitem" onclick={abrirClave}>🔑 Cambiar contraseña</button>
           <button role="menuitem" onclick={() => aplicarTema(app.tema === "oscuro" ? "claro" : "oscuro")}>
@@ -110,6 +153,13 @@
       {/if}
     </div>
   </header>
+  {#if recordatorio && pendientesDesde !== null}
+    <div class="recordatorio" role="status" data-recordatorio-sync>
+      <span>📶 Tienes avances de {haceCuanto(pendientesDesde)} sin enviar.</span>
+      <button class="chico primario" onclick={() => { cerrarRecordatorio(); void enviarAhora(); }}>Enviar</button>
+      <button class="fantasma chico" aria-label="Cerrar recordatorio" onclick={cerrarRecordatorio}>✕</button>
+    </div>
+  {/if}
 
   <div class="cuerpo">
     <aside class="lateral" class:abierto={temarioAbierto} id="panel-lateral" bind:this={lateral}>
@@ -128,6 +178,7 @@
           <span class="insignia">↗ <strong>{g.salidas}</strong></span>
           <span class="suave">Mis estadísticas</span>
         </button>
+        <PanelSync id="sync-movil" />
         <button class="fantasma" onclick={abrirClave}>🔑 Cambiar contraseña</button>
         <button class="fantasma" onclick={() => aplicarTema(app.tema === "oscuro" ? "claro" : "oscuro")}>
           🌓 Tema {app.tema === "oscuro" ? "claro" : "oscuro"}
@@ -181,6 +232,21 @@
     background: var(--superficie);
     border-bottom: 1px solid var(--borde);
     min-height: 52px;
+  }
+  .recordatorio {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.88em;
+    background: var(--aviso-suave);
+    color: var(--aviso);
+    border-bottom: 1px solid color-mix(in srgb, var(--aviso) 30%, transparent);
+  }
+  .recordatorio span {
+    flex: 1;
+    min-width: 12em;
   }
   .marca {
     font-weight: 700;

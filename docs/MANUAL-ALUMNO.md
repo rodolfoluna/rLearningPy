@@ -50,6 +50,39 @@ Arriba ves el estado:
 Antes de **cerrar sesión**, conéctate a internet para que todo se envíe. Si entras desde otro
 equipo, tu avance te sigue (cuando el primero ya lo haya enviado).
 
+### Con datos móviles (celular)
+
+Para cuidar tu saldo, en el celular la app **se sincroniza sola con Wi‑Fi** y, con **datos
+móviles**, guarda tu avance en el teléfono hasta que tú lo pidas. Nunca pierdes trabajo.
+
+- **☁ con punto ámbar**: hay avances sin enviar. Toca el ícono (o abre el menú ☰) y toca
+  **Enviar ahora**: se envía todo (pocos KB) y la app vuelve a esperar. Cada toque vale para un
+  envío.
+- **☁ sin punto**: estás al día; con datos móviles lo siguiente se enviará cuando lo pidas.
+- Al conectarte a **Wi‑Fi** se envía todo solo, sin avisos.
+- Si tienes avances de hace más de un día sin enviar, verás una vez una línea arriba
+  ("Tienes avances de hace 2 días sin enviar · Enviar") que puedes cerrar.
+- **Entrar**, cambiar la contraseña inicial y **cerrar sesión** sí usan la red siempre (al
+  cerrar sesión se envía lo pendiente).
+
+En el menú ☰ (o en tu cuenta, en computadora), **Sincronización** tiene tres opciones que se
+recuerdan en este dispositivo:
+
+- **Automática en Wi‑Fi, preguntar con datos** (la normal). "Permitir siempre con datos móviles"
+  cambia a la siguiente.
+- **Siempre automática**: como antes, también con datos móviles.
+- **Solo cuando yo lo pida**: útil en **iPhone**, que no le dice a la app si estás en Wi‑Fi o en
+  datos (ahí, y en computadoras, la app lo trata como Wi‑Fi). El "Ahorro de datos" de Android
+  cuenta como datos móviles.
+
+Lo que de verdad pesa también espera al Wi‑Fi:
+
+- **Python** (≈12 MB, una vez): si aún no está en tu celular y estás con datos, al ejecutar te
+  pregunta **Descargar Python con datos móviles** o **Esperar a Wi‑Fi**.
+- **Versión nueva de la app** (1–3 MB): se descarga con Wi‑Fi; si quieres, toca **Descargar
+  ahora** en el aviso.
+- **Lanzador del `.exe`** (≈13 MB, una vez): el diálogo te avisa antes de descargarlo.
+
 ## 4. Calificaciones y comentarios
 
 Cuando tu profesor califica una actividad, al abrirla ves arriba **"Tu profesor"** con la

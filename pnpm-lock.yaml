@@ -84,6 +84,9 @@ importers:
       '@rlp/editor':
         specifier: workspace:*
         version: link:../editor
+      '@rlp/nube':
+        specifier: workspace:*
+        version: link:../nube
       '@rlp/python-worker':
         specifier: workspace:*
         version: link:../python-worker

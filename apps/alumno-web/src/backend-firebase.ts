@@ -11,22 +11,39 @@
 //  - los contadores se suman en memoria y se escriben con `increment()` cada ~60 s, junto con el
 //    resumen de avance (`avance`) que lee el tablero del profesor (así el tablero lee un documento
 //    por alumno, no uno por actividad).
+//
+// Datos móviles (`PoliticaSync`, solo con sesión de alumno): según el ajuste del dispositivo y el
+// tipo de red (@rlp/nube/red), la red de Firestore se pausa con `disableNetwork`. Las escrituras
+// siguen igual (caché persistente) y salen al reactivarla: al pasar a Wi‑Fi, o con "Enviar
+// ahora" (se activa, se espera `waitForPendingWrites` y se vuelve a pausar). Entrar, cambiar la
+// contraseña inicial y cerrar sesión usan la red siempre.
 
 import {
+  alCambiarRed,
   auth,
+  calcularEstadoSync,
   cambiarClave,
   cambiarClaveInicial,
   cerrarSesionAlumno,
+  clavePendientes,
   configurarProfesor,
   contadoresVacios as contadoresNube,
   db,
+  decidirSync,
+  guardarAjusteSync,
+  guardarNumero,
   hayProfesor,
   iniciarSesion as iniciarSesionNube,
+  leerAjusteSync,
+  leerNumero,
   POLITICAS_POR_DEFECTO,
   resumenAvance,
   rolDeUsuario,
   rutas,
   sesionGuardada,
+  tipoRed,
+  type AjusteSync,
+  type TipoRed,
   type DocActividad,
   type DocAlumno,
   type DocContadores,
@@ -48,7 +65,9 @@ import {
 import {
   arrayUnion,
   collection,
+  disableNetwork,
   doc,
+  enableNetwork,
   getDoc,
   getDocFromCache,
   getDocs,
@@ -72,6 +91,12 @@ const LIMITE_EDICIONES = 700_000;
 const ESPERA_LECTURA_MS = 4000;
 /** `ultimaSync` se escribe a lo más cada 5 minutos (el tablero usa también `contadores.actualizado`). */
 const INTERVALO_ULTIMA_SYNC_MS = 5 * 60_000;
+/** "Enviar ahora": cuánto se deja activa la red esperando la confirmación antes de volver a pausar. */
+const ESPERA_ENVIO_MS = 120_000;
+/** Al entrar o cerrar sesión: cuánto se espera a que salga lo escrito. */
+const ESPERA_SESION_MS = 5000;
+/** "1" si en este equipo quedó una sesión de alumno abierta (para pausar la red desde el arranque). */
+const CLAVE_SESION_ALUMNO = "rlp-sesion-alumno";
 
 const contadoresVacios = contadoresNube as () => Contadores;
 
@@ -466,6 +491,102 @@ class SesionAlumno {
   }
 }
 
+function leerTexto(clave: string): string | null {
+  try {
+    return localStorage.getItem(clave);
+  } catch {
+    return null;
+  }
+}
+
+function guardarTexto(clave: string, valor: string | null) {
+  try {
+    if (valor === null) localStorage.removeItem(clave);
+    else localStorage.setItem(clave, valor);
+  } catch {
+    /* sin almacenamiento */
+  }
+}
+
+/**
+ * Decide si la red de Firestore está activa. Con sesión de alumno sigue el ajuste del dispositivo
+ * y el tipo de red; sin sesión (pantalla de acceso) o con el profesor, siempre activa. Mientras
+ * alguien la "fuerza" (entrar, "Enviar ahora", cerrar sesión) también está activa.
+ *
+ * `enableNetwork`/`disableNetwork` no esperan al servidor; aun así las transiciones van en fila y
+ * cada paso vuelve a leer el estado deseado, así que varios eventos `change` seguidos terminan en
+ * el estado correcto sin cruzarse.
+ */
+class PoliticaSync {
+  ajuste: AjusteSync = leerAjusteSync();
+  tipo: TipoRed = tipoRed();
+  /** ¿Hay sesión de alumno? (desde el arranque, si quedó una abierta en este equipo). */
+  private alumno = leerTexto(CLAVE_SESION_ALUMNO) === "1";
+  private forzada = 0;
+  /** Lo último pedido a Firestore (empieza con la red activa). */
+  private activa = true;
+  private cola: Promise<void> = Promise.resolve();
+
+  constructor(private readonly avisar: (seActivo: boolean) => void) {
+    alCambiarRed((t) => {
+      this.tipo = t;
+      void this.aplicar();
+    });
+  }
+
+  private deseada(): boolean {
+    return this.forzada > 0 || !this.alumno || decidirSync(this.ajuste, this.tipo) === "auto";
+  }
+
+  /** ¿La red de la nube está en pausa por la política? */
+  pausada(): boolean {
+    return !this.deseada();
+  }
+
+  ponerAlumno(alumno: boolean) {
+    this.alumno = alumno;
+    guardarTexto(CLAVE_SESION_ALUMNO, alumno ? "1" : null);
+    void this.aplicar();
+  }
+
+  cambiarAjuste(a: AjusteSync) {
+    this.ajuste = a;
+    guardarAjusteSync(a);
+    void this.aplicar();
+  }
+
+  /** Lleva Firestore al estado deseado (en fila). Termina sin esperar al servidor. */
+  aplicar(): Promise<void> {
+    this.cola = this.cola.then(async () => {
+      const deseada = this.deseada();
+      const cambia = deseada !== this.activa;
+      if (cambia) {
+        this.activa = deseada;
+        try {
+          await (deseada ? enableNetwork(db()) : disableNetwork(db()));
+        } catch (e) {
+          console.warn("No se pudo cambiar la red de la nube:", e);
+        }
+      }
+      this.avisar(cambia && deseada);
+    });
+    return this.cola;
+  }
+
+  /** Activa la red hasta llamar a la función que devuelve (una sola vez). */
+  forzar(): () => void {
+    this.forzada++;
+    void this.aplicar();
+    let suelta = false;
+    return () => {
+      if (suelta) return;
+      suelta = true;
+      this.forzada--;
+      void this.aplicar();
+    };
+  }
+}
+
 /** Núcleo para `iniciarApp`: login común, sesión del alumno y estado de sincronización. */
 class NucleoFirebase {
   sesion: SesionAlumno | null = null;
@@ -474,9 +595,24 @@ class NucleoFirebase {
   private enCola = 0;
   private generacion = 0;
   private ultimoSync: EstadoSincronizacion | null = null;
+  /** Estado + red + ajuste + pendientes: se avisa a la interfaz si cambia cualquiera. */
+  private claveSync = "";
   private ultimaSyncEscrita = 0;
+  /** Desde cuándo hay escrituras retenidas por la pausa (también en localStorage, por alumno). */
+  private pendientesDesde: number | null = null;
+  /** ¿Se está enviando por "Enviar ahora"? */
+  private enviando = false;
+  readonly politica = new PoliticaSync((seActivo) => {
+    if (seActivo && this.sesion) {
+      this.sesion.vaciar(); // al reactivar (Wi‑Fi, ajuste) sale también lo agrupado
+      if (this.pendientesDesde !== null || this.enCola > 0) this.vigilarPendientes();
+    }
+    this.recalcular();
+  });
 
   constructor() {
+    // Con una sesión de alumno guardada y datos móviles, la red queda en pausa desde el arranque.
+    void this.politica.aplicar();
     addEventListener("online", () => {
       this.sesion?.vaciar(); // al volver la red se envía todo lo agrupado
       this.recalcular();
@@ -490,39 +626,100 @@ class NucleoFirebase {
   /** Registra una escritura en curso (sin bloquear a nadie). */
   escritura(p: Promise<unknown>) {
     this.enCola++;
-    const gen = ++this.generacion;
+    if (this.politica.pausada() && this.pendientesDesde === null) this.ponerPendientes(Date.now());
     p.catch((e) => console.warn("No se pudo guardar en la nube:", e));
     this.recalcular();
+    this.vigilarPendientes();
+  }
+
+  /**
+   * Cuando el servidor confirma todo lo escrito hasta ahora, el indicador pasa a "Sincronizado".
+   * Con la red en pausa la promesa espera (sin bloquear nada) a que se reactive.
+   */
+  private vigilarPendientes() {
+    const gen = ++this.generacion;
     waitForPendingWrites(db())
       .then(() => {
         if (gen !== this.generacion) return;
         this.enCola = 0;
+        this.ponerPendientes(null);
         this.recalcular();
         this.marcarUltimaSync();
       })
       .catch(() => undefined);
   }
 
+  private ponerPendientes(desde: number | null) {
+    this.pendientesDesde = desde;
+    if (this.sesion) guardarNumero(clavePendientes(this.sesion.alumnoId), desde);
+  }
+
   private marcarUltimaSync(forzar = false) {
     const s = this.sesion;
-    if (!s || !navigator.onLine) return;
+    if (!s || !navigator.onLine || this.politica.pausada()) return;
     const ahora = Date.now();
     if (!forzar && ahora - this.ultimaSyncEscrita < INTERVALO_ULTIMA_SYNC_MS) return;
     this.ultimaSyncEscrita = ahora;
-    // Sin pasar por `escritura`: no debe volver a disparar el indicador.
-    updateDoc(doc(db(), rutas.alumno(s.alumnoId)), { ultimaSync: ahora }).catch(() => undefined);
+    // Sin pasar por `escritura`: no debe volver a disparar el indicador. `redUltimaSync` le deja
+    // ver al profesor (📶) que el último envío fue con datos móviles.
+    updateDoc(doc(db(), rutas.alumno(s.alumnoId)), { ultimaSync: ahora, redUltimaSync: this.politica.tipo }).catch(
+      () => undefined,
+    );
   }
 
   recalcular() {
-    let e: EstadoSincronizacion | null;
-    if (!this.sesion) e = null;
-    else if (!navigator.onLine) e = "sin-conexion";
-    else if (this.enCola > 0 || this.sesion.pendiente()) e = "sincronizando";
-    else e = "sincronizado";
-    if (e === this.ultimoSync) return;
+    const s = this.sesion;
+    const e: EstadoSincronizacion | null = s
+      ? calcularEstadoSync({
+          enLinea: navigator.onLine,
+          pausada: this.politica.pausada(),
+          enviando: this.enviando,
+          pendiente: this.enCola > 0 || s.pendiente() || this.pendientesDesde !== null,
+        })
+      : null;
+    const clave = `${e}|${this.politica.tipo}|${this.politica.ajuste}|${this.pendientesDesde}`;
+    if (clave === this.claveSync) return;
+    this.claveSync = clave;
+    const cambio = e !== this.ultimoSync;
     this.ultimoSync = e;
     if (e) this.oyentesSync.forEach((f) => f(e));
-    if (e === "sincronizado") this.marcarUltimaSync();
+    if (cambio && e === "sincronizado") this.marcarUltimaSync();
+  }
+
+  /** "Enviar ahora": activa la red, espera a que todo llegue y vuelve a pausar. No bloquea. */
+  enviarAhora() {
+    const s = this.sesion;
+    if (!s || this.enviando) return;
+    s.vaciar();
+    if (!this.politica.pausada()) return; // ya se sincroniza sola
+    this.enviando = true;
+    const soltar = this.politica.forzar();
+    this.recalcular();
+    void this.politica
+      .aplicar()
+      .then(() => {
+        this.marcarUltimaSync(true); // va en el mismo envío (antes de volver a pausar)
+        return conLimite(waitForPendingWrites(db()), ESPERA_ENVIO_MS);
+      })
+      .then(
+        () => {
+          this.enCola = 0;
+          this.ponerPendientes(null);
+        },
+        () => undefined, // sin señal: lo pendiente sigue guardado en el equipo
+      )
+      .finally(() => {
+        this.enviando = false;
+        soltar();
+        this.recalcular();
+      });
+  }
+
+  /** Suelta la red forzada cuando salga lo escrito (o tras unos segundos), sin esperar. */
+  private soltarAlTerminar(soltar: () => void) {
+    void conLimite(waitForPendingWrites(db()), ESPERA_SESION_MS)
+      .catch(() => undefined)
+      .finally(soltar);
   }
 
   avisarAlumno(e: EstadoAlumno) {
@@ -532,17 +729,25 @@ class NucleoFirebase {
   async abrirSesion(s: SesionNube): Promise<SesionIniciada> {
     this.sesion?.cerrar();
     this.sesion = null;
-    if (s.rol === "profesor") return { rol: "profesor" };
+    if (s.rol === "profesor") {
+      this.politica.ponerAlumno(false);
+      return { rol: "profesor" };
+    }
     const datos = await leerDoc<DocAlumno>(doc(db(), rutas.alumno(s.alumnoId)));
     if (!datos) throw new Error("No se encontraron tus datos. Conéctate a internet e inténtalo de nuevo.");
     const sesion = new SesionAlumno(s.alumnoId, datos, this);
     await sesion.cargar();
     this.sesion = sesion;
+    this.pendientesDesde = leerNumero(clavePendientes(s.alumnoId));
+    this.enCola = 0;
+    this.politica.ponerAlumno(true);
     sesion.escuchar();
     sesion.evento("sesion_inicio", null, {});
     this.ultimoSync = null;
+    this.claveSync = "";
     this.recalcular();
     this.marcarUltimaSync(true);
+    if (this.pendientesDesde !== null && !this.politica.pausada()) this.vigilarPendientes();
     return { rol: "alumno", estado: sesion.estado() };
   }
 
@@ -561,22 +766,68 @@ class NucleoFirebase {
       }),
       reanudarSesion: async () => {
         const u = await sesionGuardada();
-        if (!u) return null;
-        return this.abrirSesion(await rolDeUsuario(u.uid));
+        if (!u) {
+          this.politica.ponerAlumno(false);
+          return null;
+        }
+        try {
+          // Con la red en pausa se lee de la caché (no gasta datos ni envía lo pendiente).
+          return await this.abrirSesion(await rolDeUsuario(u.uid));
+        } catch (e) {
+          if (!this.politica.pausada()) throw e;
+          // Faltan datos en la caché: solo para entrar se usa la red.
+          const soltar = this.politica.forzar();
+          await this.politica.aplicar();
+          try {
+            return await this.abrirSesion(await rolDeUsuario(u.uid));
+          } finally {
+            this.soltarAlTerminar(soltar);
+          }
+        }
       },
-      iniciarSesion: async (usuario, clave) => this.abrirSesion(await iniciarSesionNube(usuario, clave)),
+      iniciarSesion: async (usuario, clave) => {
+        // Entrar siempre usa la red (pocos bytes; sin ella no se puede iniciar sesión).
+        const soltar = this.politica.forzar();
+        await this.politica.aplicar();
+        try {
+          return await this.abrirSesion(await iniciarSesionNube(usuario, clave));
+        } finally {
+          this.soltarAlTerminar(soltar);
+        }
+      },
       configurarProfesor: async (correo, clave) => {
         await configurarProfesor(correo, clave);
       },
       cambiarContrasenaInicial: async (nueva) => {
         const s = this.s();
-        await cambiarClaveInicial(s.alumnoId, nueva);
+        // Usa la red aunque esté en pausa: si no, otro equipo volvería a pedir el cambio.
+        const soltar = this.politica.forzar();
+        await this.politica.aplicar();
+        try {
+          await cambiarClaveInicial(s.alumnoId, nueva);
+        } finally {
+          this.soltarAlTerminar(soltar);
+        }
         s.datos = { ...s.datos, debeCambiarClave: false };
       },
       cambiarContrasena: (actual, nueva) => cambiarClave(actual, nueva),
       cerrarSesion: async () => {
-        this.sesion?.cerrar();
+        const s = this.sesion;
+        s?.cerrar();
+        if (s && navigator.onLine && this.politica.pausada()) {
+          // Lo pendiente se envía antes de salir (si no, quedaría en este equipo hasta que este
+          // alumno vuelva a entrar aquí). Se espera unos segundos como mucho.
+          const soltar = this.politica.forzar();
+          await this.politica.aplicar();
+          await conLimite(waitForPendingWrites(db()), ESPERA_SESION_MS).then(
+            () => this.ponerPendientes(null),
+            () => undefined,
+          );
+          soltar();
+        }
         this.sesion = null;
+        this.enviando = false;
+        this.politica.ponerAlumno(false);
         this.recalcular();
         await cerrarSesionAlumno();
       },
@@ -603,6 +854,9 @@ class NucleoFirebase {
         this.oyentesAlumno.add(fn);
         return () => this.oyentesAlumno.delete(fn);
       },
+      infoRed: () => ({ tipo: this.politica.tipo, ajuste: this.politica.ajuste, pendientesDesde: this.pendientesDesde }),
+      cambiarAjusteSync: (a) => this.politica.cambiarAjuste(a),
+      enviarAhora: () => this.enviarAhora(),
     };
   }
 }
