@@ -8,6 +8,8 @@ import { cambiarRed, simularConexion } from "./red";
 
 const capturas = "tests/e2e/capturas";
 test.use({ viewport: { width: 360, height: 740 }, hasTouch: true });
+// `navigator.connection` (el tipo de red) solo existe en Chrome: en WebKit no hay nada que probar.
+test.skip(({ browserName }) => browserName !== "chromium", "navigator.connection solo existe en Chromium");
 
 async function entrar(page: Page, control: string, consulta = "") {
   await page.goto(`/?simulado${consulta}`);
@@ -44,7 +46,7 @@ test("datos móviles: punto ámbar, Enviar ahora, Wi‑Fi y ajuste", async ({ pa
   // Resolver con datos móviles: queda pendiente (nube con punto ámbar, solo ícono en la barra).
   await responder(page, "u0-que-hace-print", /Muestra la palabra/);
   await expect(sync).toHaveAttribute("data-sync", "pendiente-datos");
-  await expect(sync.locator(".texto")).not.toBeInViewport();
+  expect((await sync.locator(".texto").boundingBox())?.width ?? 0).toBeLessThanOrEqual(1); // solo el ícono
   await page.waitForTimeout(400); // que se vaya el aviso de "¡Correcto!"
   await page.locator(".aviso-flotante").waitFor({ state: "hidden", timeout: 10_000 }).catch(() => undefined);
   await page.screenshot({ path: `${capturas}/datos-01-pendiente.png` });

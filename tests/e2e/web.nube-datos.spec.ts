@@ -19,6 +19,7 @@ import { cambiarRed, simularConexion } from "./red";
 
 const dist = resolve("apps/alumno-web/dist");
 test.skip(!existsSync(join(dist, "sw.js")), "Compila la versión web: pnpm --filter @rlp/alumno-web build:emulador");
+test.skip(({ browserName }) => browserName !== "chromium", "navigator.connection solo existe en Chromium");
 
 const MOVIL = { viewport: { width: 412, height: 915 }, hasTouch: true };
 const capturas = "tests/e2e/capturas";
