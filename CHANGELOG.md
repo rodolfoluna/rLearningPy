@@ -5,6 +5,19 @@ siguen [SemVer](https://semver.org/lang/es/). El curso tiene su propia versión 
 
 ## [Sin publicar]
 
+### Celulares: ajustes de pantalla y `.exe` solo en computadora
+
+- **⚙ Crear programa .exe** aparece solo en computadoras: no en celulares ni tabletas (Client
+  Hints `userAgentData.mobile`, user agent Android/iPhone/iPad/Mobile, iPadOS que se presenta
+  como Mac) y solo con ventana grande (`min-width: 900px`, se vigila al cambiar el tamaño).
+  Detección en `packages/alumno-ui/src/lib/dispositivo.ts`, con pruebas.
+- El ajuste **Sincronización** del menú ☰ es una lista de opciones (antes una lista desplegable
+  que cortaba "Automática en Wi‑Fi, preguntar con datos" en celulares).
+- Las barras de aviso ("Hay una versión nueva…", "Se descargará cuando tengas Wi‑Fi", instalar)
+  en celulares: texto a todo lo ancho, ✕ en la esquina y el botón abajo; en pantallas anchas,
+  un renglón.
+- Los botones al pie de los diálogos bajan de renglón en ventanas angostas en vez de cortarse.
+
 ### Celulares: sincronizar con Wi‑Fi y preguntar con datos móviles
 
 - Con sesión de alumno, la red de Firestore se pausa (`disableNetwork`) cuando la red es de datos

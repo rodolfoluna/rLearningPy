@@ -135,7 +135,7 @@ test("datos móviles con «Siempre automática»: como antes", async ({ browser 
   const { contexto, page } = await abrir(browser, "cellular");
   await entrar(page, cred);
   await menu(page).click();
-  await page.locator("#panel-lateral").getByLabel("Sincronización").selectOption("siempre");
+  await page.locator("#panel-lateral").getByRole("radiogroup", { name: "Sincronización" }).locator('input[value="siempre"]').check();
   await page.keyboard.press("Escape");
   await responder(page, /Muestra la palabra/);
   await expect.poll(async () => (await actividad(cred))?.completada, { timeout: 30_000 }).toBe(true);
@@ -180,6 +180,8 @@ test("versión nueva de la app: con datos móviles se pospone hasta el Wi‑Fi",
 
   await cambiarRed(page, "wifi");
   await expect(page.getByText("Hay una versión nueva de la app.")).toBeVisible({ timeout: 60_000 });
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.screenshot({ path: `${capturas}/nube-datos-04-version-nueva-360.png` });
   await contexto.close();
 });
 
@@ -192,6 +194,13 @@ test("versión nueva de la app: «Descargar ahora» con datos móviles", async (
   await revisarVersion(page);
   const barra = page.getByRole("status").filter({ hasText: "Se descargará cuando tengas Wi‑Fi" });
   await expect(barra).toBeVisible({ timeout: 30_000 });
+  // En un celular angosto: texto a todo lo ancho y el botón abajo, sin columnas apretadas.
+  await page.setViewportSize({ width: 360, height: 740 });
+  const texto = await barra.locator(".rlp-barra-texto").boundingBox();
+  const boton = await barra.getByRole("button", { name: "Descargar ahora" }).boundingBox();
+  expect(texto!.width).toBeGreaterThan(250);
+  expect(boton!.y).toBeGreaterThanOrEqual(texto!.y + texto!.height - 1);
+  await page.screenshot({ path: `${capturas}/nube-datos-03b-version-pospuesta-360.png` });
   await barra.getByRole("button", { name: "Descargar ahora" }).click();
   await expect(page.getByText("Hay una versión nueva de la app.")).toBeVisible({ timeout: 60_000 });
   await contexto.close();

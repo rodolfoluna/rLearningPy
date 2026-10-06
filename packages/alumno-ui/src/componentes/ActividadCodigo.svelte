@@ -8,6 +8,8 @@
   import { conDialogo, enDialogoNativo } from "../lib/dialogos";
   import { crearEjecutable, guardarArchivo, lanzadorEnCache, limpiarNombre, nombreSugerido, obtenerLanzador, TAMANO_LANZADOR } from "../lib/ejecutable";
   import { tipoRed } from "@rlp/nube/red";
+  import { MediaQuery } from "svelte/reactivity";
+  import { esComputadora, PANTALLA_GRANDE } from "../lib/dispositivo";
   import {
     actualizarActividad,
     alCerrar,
@@ -45,7 +47,11 @@
   let fuente = $state(Number(leer("rlp-fuente") ?? 15));
   let confirmarReinicio = $state(false);
 
-  // Crear programa .exe (lanzador de Windows + el código del alumno, armado en el navegador)
+  // Crear programa .exe (lanzador de Windows + el código del alumno, armado en el navegador).
+  // Solo en computadoras: no en celulares ni tabletas, y con ventana grande (se vigila al cambiar
+  // el tamaño).
+  const pantallaGrande = new MediaQuery(PANTALLA_GRANDE, true);
+  const puedeCrearExe = $derived(esComputadora(navigator, pantallaGrande.current));
   let modalExe = $state(false);
   // svelte-ignore state_referenced_locally
   let nombreExe = $state(nombreSugerido(actividad.id));
@@ -358,7 +364,9 @@
       <span class="espaciador"></span>
       <button class="fantasma chico" onclick={() => cambiarFuente(-1)} title="Letra más chica">A−</button>
       <button class="fantasma chico" onclick={() => cambiarFuente(1)} title="Letra más grande">A+</button>
-      <button class="chico" onclick={abrirExe} disabled={cargando} title="Crear un programa para Windows con tu código">⚙ Crear programa .exe</button>
+      {#if puedeCrearExe}
+        <button class="chico" onclick={abrirExe} disabled={cargando} title="Crear un programa para Windows con tu código">⚙ Crear programa .exe</button>
+      {/if}
       <button class="chico" onclick={() => (confirmarReinicio = true)} disabled={cargando} title="Volver al código inicial">↺</button>
     </div>
     <div class="editor" bind:this={contenedor} style:--editor-fuente="{fuente}px" data-editor>
@@ -403,7 +411,7 @@
 <Modal titulo="Crear programa .exe" abierto={modalExe} cerrar={creandoExe ? undefined : () => (modalExe = false)} ancho="600px">
   <p class="suave">
     Crea un programa <strong>.exe</strong> con tu código que se abre con doble clic en cualquier computadora con
-    <strong>Windows 10 u 11 (64 bits)</strong>, sin instalar Python. Puedes descargarlo desde cualquier equipo, pero solo
+    <strong>Windows 10 u 11 (64 bits)</strong>, sin instalar Python. Puedes crearlo desde cualquier computadora, pero solo
     funciona en Windows. Usa solo lo que trae Python (no paquetes de <code>pip</code> ni <code>turtle</code>/<code>tkinter</code>).
   </p>
   <div class="campo">

@@ -30,7 +30,7 @@ Instalada abre como una app, funciona sin conexión y tu navegador no borra tus 
   - **✔ Probar** para correr las pruebas automáticas. Si todas pasan, la actividad queda
     completada y ganas sus puntos;
   - **Pistas**, si te atoras;
-  - **⚙ Crear programa .exe** para llevarte tu programa (ver la sección 8).
+  - **⚙ Crear programa .exe** para llevarte tu programa (solo en computadora; ver la sección 8).
 - **Predicción** y **opción múltiple**: responde y revisa la explicación.
 - Si un programa tiene un error, la app te lo explica en español y marca la línea.
 
@@ -81,7 +81,8 @@ Lo que de verdad pesa también espera al Wi‑Fi:
   pregunta **Descargar Python con datos móviles** o **Esperar a Wi‑Fi**.
 - **Versión nueva de la app** (1–3 MB): se descarga con Wi‑Fi; si quieres, toca **Descargar
   ahora** en el aviso.
-- **Lanzador del `.exe`** (≈13 MB, una vez): el diálogo te avisa antes de descargarlo.
+- **Lanzador del `.exe`** (≈13 MB, una vez, solo en computadora): el diálogo te avisa antes de
+  descargarlo.
 
 ## 4. Calificaciones y comentarios
 
@@ -115,6 +116,9 @@ nada de tu avance. Al entrar, elige otra vez tu contraseña.
 
 ## 8. Crear un programa `.exe`
 
+**Solo en computadora** (de escritorio o laptop): en celulares y tabletas, o con la ventana del
+navegador muy angosta, el botón no aparece. Si no lo ves en tu computadora, agranda la ventana.
+
 En una actividad de código, presiona **⚙ Crear programa .exe**, escribe el nombre de tu programa
 y presiona **Crear y descargar**. El archivo `<nombre>.exe` queda en tus **Descargas**; ábrelo con
 doble clic en cualquier computadora con Windows, aunque no tenga Python. Si tu programa usa
@@ -127,7 +131,7 @@ presiones Enter para cerrarse.
   clic en **Más información** y luego en **Ejecutar de todas formas**. Si un antivirus lo
   bloquea, avísale a tu profesor.
 - Solo funciona en **Windows 10 u 11 de 64 bits** y solo con lo que trae Python (no paquetes de
-  `pip`, ni `turtle`/`tkinter`). Puedes descargarlo desde otro equipo, pero se abre en Windows.
+  `pip`, ni `turtle`/`tkinter`). Puedes crearlo en una Mac o Linux, pero se abre en Windows.
 - La primera vez que lo abres en una computadora tarda unos segundos: prepara Python (unos 25 MB)
   en la carpeta `%LOCALAPPDATA%\RealLearningProgramming`.
 - Si tu programa abre archivos (`open("datos.txt")`), los busca en la carpeta donde está el `.exe`.

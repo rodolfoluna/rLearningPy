@@ -1,9 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { cambiarRed, simularConexion } from "./red";
 
 // Datos móviles en el celular con el núcleo simulado (`?simulado`) y `navigator.connection`
 // simulado: el indicador (punto ámbar, "Enviar ahora", Wi‑Fi), el ajuste de sincronización, el
-// recordatorio de avances viejos y las descargas pesadas (Python, lanzador del .exe).
+// recordatorio de avances viejos y las descargas pesadas (Python; el lanzador del .exe, en computadora).
 // Con Firebase de verdad (emuladores) lo prueba web.nube-datos.spec.ts.
 
 const capturas = "tests/e2e/capturas";
@@ -21,6 +21,10 @@ async function entrar(page: Page, control: string, consulta = "") {
   await page.getByRole("button", { name: "Guardar y continuar" }).click();
   await expect(page.getByRole("heading", { name: /Hola, Alumno/ })).toBeVisible();
 }
+
+/** Opción del ajuste "Sincronización" (lista de opciones en el menú). */
+const ajuste = (panel: Locator, valor: "wifi" | "siempre" | "manual") =>
+  panel.getByRole("radiogroup", { name: "Sincronización" }).locator(`input[value="${valor}"]`);
 
 const menu = (page: Page) => page.getByRole("button", { name: "Menú", exact: true });
 
@@ -57,7 +61,7 @@ test("datos móviles: punto ámbar, Enviar ahora, Wi‑Fi y ajuste", async ({ pa
   const panel = page.locator("#panel-lateral [data-panel-sync]");
   await expect(panel).toContainText("Hay avances sin enviar (datos móviles)");
   await expect(panel.getByLabel("Permitir siempre con datos móviles")).not.toBeChecked();
-  await expect(panel.getByLabel("Sincronización")).toHaveValue("wifi");
+  await expect(ajuste(panel, "wifi")).toBeChecked();
   await expect.poll(async () => (await page.locator("#panel-lateral").boundingBox())?.x).toBe(0);
   await page.screenshot({ path: `${capturas}/datos-02-menu.png` });
 
@@ -78,7 +82,7 @@ test("datos móviles: punto ámbar, Enviar ahora, Wi‑Fi y ajuste", async ({ pa
 
   // "Solo cuando yo lo pida": aun con Wi‑Fi queda pendiente hasta tocar "Enviar ahora".
   await menu(page).click();
-  await panel.getByLabel("Sincronización").selectOption("manual");
+  await ajuste(panel, "manual").check();
   await page.keyboard.press("Escape");
   await responder(page, "u0-que-hace-print", /Imprime la palabra/);
   await expect(sync).toHaveAttribute("data-sync", "pendiente-datos");
@@ -87,9 +91,9 @@ test("datos móviles: punto ámbar, Enviar ahora, Wi‑Fi y ajuste", async ({ pa
   // "Permitir siempre con datos móviles" (= Siempre automática): con datos móviles se envía solo.
   await cambiarRed(page, "cellular");
   await menu(page).click();
-  await panel.getByLabel("Sincronización").selectOption("wifi");
+  await ajuste(panel, "wifi").check();
   await panel.getByLabel("Permitir siempre con datos móviles").click(); // ya no hay pendientes: desaparece
-  await expect(panel.getByLabel("Sincronización")).toHaveValue("siempre");
+  await expect(ajuste(panel, "siempre")).toBeChecked();
   await expect(sync).toHaveAttribute("data-sync", "sincronizado");
   expect(await page.evaluate(() => localStorage.getItem("rlp-sync"))).toBe("siempre");
 });
@@ -115,7 +119,7 @@ test("recordatorio suave de avances de hace días", async ({ page, context }) =>
   expect(await page.evaluate(() => sessionStorage.getItem("rlp-recordatorio-sync"))).toBe("1");
 });
 
-test("descargas pesadas con datos móviles: Python y el lanzador del .exe", async ({ page, context }) => {
+test("descargas pesadas con datos móviles: Python", async ({ page, context }) => {
   test.setTimeout(150_000);
   await simularConexion(context, "cellular");
   await entrar(page, "21349004");
@@ -123,13 +127,8 @@ test("descargas pesadas con datos móviles: Python y el lanzador del .exe", asyn
   const pestanas = page.locator("[data-pestanas-movil]");
   await pestanas.getByRole("tab", { name: "Código" }).click();
 
-  // El lanzador: antes de crear el .exe se avisa el tamaño.
-  await page.getByRole("button", { name: /Crear programa .exe/ }).click();
-  const dialogo = page.getByRole("dialog");
-  await expect(dialogo.locator("[data-aviso-descarga-exe]")).toContainText("13 MB");
-  await expect(dialogo.locator("[data-aviso-descarga-exe]")).toContainText("datos móviles");
-  await page.screenshot({ path: `${capturas}/datos-06-exe.png` });
-  await dialogo.getByRole("button", { name: /Cancelar|Cerrar/ }).first().click();
+  // En el celular no se ofrece crear programas .exe (solo en computadoras).
+  await expect(page.getByRole("button", { name: /Crear programa .exe/ })).toHaveCount(0);
 
   // Python no está guardado (servidor de desarrollo): al ejecutar se pregunta.
   await page.getByRole("button", { name: "▶ Ejecutar" }).click();
@@ -145,4 +144,19 @@ test("descargas pesadas con datos móviles: Python y el lanzador del .exe", asyn
   await pregunta.getByRole("button", { name: /Descargar Python/ }).click();
   await expect(pregunta).toBeHidden();
   await expect(page.locator(".estado-barra")).toContainText("Programa terminado", { timeout: 120_000 });
+});
+
+test.describe("computadora con datos móviles (p. ej. compartiendo el internet del celular)", () => {
+  test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false });
+
+  test("el lanzador del .exe avisa su tamaño", async ({ page, context }) => {
+    await simularConexion(context, "cellular");
+    await entrar(page, "21349005");
+    await page.locator('[data-actividad="u0-hola-mundo"]').click();
+    await page.getByRole("button", { name: /Crear programa .exe/ }).click();
+    const dialogo = page.getByRole("dialog");
+    await expect(dialogo.locator("[data-aviso-descarga-exe]")).toContainText("13 MB");
+    await expect(dialogo.locator("[data-aviso-descarga-exe]")).toContainText("datos móviles");
+    await page.screenshot({ path: `${capturas}/datos-06-exe.png` });
+  });
 });

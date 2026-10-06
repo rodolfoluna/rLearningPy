@@ -29,12 +29,16 @@
         </label>
       {/if}
     {/if}
-    <label class="ajuste" for={`${id}-ajuste`}>Sincronización</label>
-    <select id={`${id}-ajuste`} value={red.ajuste} onchange={(e) => cambiarAjusteSync(e.currentTarget.value as AjusteSync)}>
+    <fieldset class="ajuste" role="radiogroup" aria-labelledby={`${id}-ajuste`}>
+      <legend id={`${id}-ajuste`}>Sincronización</legend>
       {#each AJUSTES as [valor, texto] (valor)}
-        <option value={valor}>{texto}</option>
+        <label class="opcion-sync">
+          <input type="radio" name={`${id}-ajuste`} value={valor} checked={red.ajuste === valor}
+            onchange={() => cambiarAjusteSync(valor)} />
+          <span>{texto}</span>
+        </label>
       {/each}
-    </select>
+    </fieldset>
   </div>
 {/if}
 
@@ -72,13 +76,40 @@
     flex: none;
   }
   .ajuste {
-    margin: 0.2rem 0 0;
-    font-size: 1em;
-  }
-  select {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
     width: 100%;
-    max-width: 100%;
-    font-size: 0.92em;
-    text-overflow: ellipsis;
+    min-width: 0;
+    margin: 0.2rem 0 0;
+    padding: 0;
+    border: none;
+  }
+  legend {
+    padding: 0;
+    margin-bottom: 0.2rem;
+    font-weight: 600;
+  }
+  .opcion-sync {
+    display: flex;
+    gap: 0.5em;
+    align-items: flex-start;
+    margin: 0;
+    padding: 0.3rem 0;
+    font-weight: normal;
+    font-size: 1em;
+    line-height: 1.3;
+    cursor: pointer;
+  }
+  .opcion-sync span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .opcion-sync input {
+    flex: none;
+    width: 1.05em;
+    height: 1.05em;
+    margin: 0.12em 0 0;
+    padding: 0;
   }
 </style>

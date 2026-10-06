@@ -183,29 +183,54 @@ function ofrecerInstalacion() {
   }
 }
 
+// Estilos de la barra: en celulares el texto ocupa todo el ancho (con ✕ en la esquina) y el botón
+// va abajo; en pantallas anchas, todo en un renglón.
+const ESTILO_BARRA = `
+.rlp-barra{position:fixed;z-index:900;left:max(.75rem,env(safe-area-inset-left));right:max(.75rem,env(safe-area-inset-right));
+bottom:max(1rem,env(safe-area-inset-bottom));margin-inline:auto;max-width:640px;box-sizing:border-box;
+display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"texto cerrar" "accion accion";
+align-items:center;gap:.45em .5em;padding:.7em .5em .75em 1em;border-radius:12px;
+background:var(--superficie,#fff);color:var(--texto,#1b1b1b);box-shadow:0 6px 24px rgb(0 0 0/.25);font-size:.95em;line-height:1.35}
+.rlp-barra.sin-accion{grid-template-areas:"texto cerrar"}
+.rlp-barra-texto{grid-area:texto;min-width:0;overflow-wrap:break-word}
+.rlp-barra-accion{grid-area:accion;justify-self:end;margin-right:.5em}
+.rlp-barra-cerrar{grid-area:cerrar;align-self:start}
+@media (min-width:600px){
+.rlp-barra{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"texto accion cerrar";gap:.75em;padding:.7em .6em .7em 1em}
+.rlp-barra.sin-accion{grid-template-columns:minmax(0,1fr) auto}
+.rlp-barra-accion{margin-right:0}
+.rlp-barra-cerrar{align-self:center}
+}`;
+
 /** Barra al pie de la página con un mensaje, un botón opcional y la opción de cerrarla. */
 function barra(texto: string, boton: string | null, accion: (() => unknown) | null, alCerrar?: () => void) {
+  if (!document.getElementById("rlp-estilo-barra")) {
+    const estilo = document.createElement("style");
+    estilo.id = "rlp-estilo-barra";
+    estilo.textContent = ESTILO_BARRA;
+    document.head.append(estilo);
+  }
   const div = document.createElement("div");
   div.setAttribute("role", "status");
-  div.style.cssText =
-    "position:fixed;left:50%;bottom:max(1rem,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:900;" +
-    "display:flex;gap:.75em;align-items:center;max-width:min(92vw,640px);padding:.7em 1em;border-radius:12px;" +
-    "background:var(--superficie,#fff);color:var(--texto,#1b1b1b);box-shadow:0 6px 24px rgb(0 0 0/.25);font-size:.95em";
+  div.className = "rlp-barra";
   const p = document.createElement("span");
+  p.className = "rlp-barra-texto";
   p.textContent = texto;
   div.append(p);
   if (boton && accion) {
     const b = document.createElement("button");
-    b.className = "primario";
+    b.className = "primario rlp-barra-accion";
     b.textContent = boton;
     b.onclick = () => {
       div.remove();
       void accion();
     };
     div.append(b);
+  } else {
+    div.classList.add("sin-accion");
   }
   const x = document.createElement("button");
-  x.className = "fantasma";
+  x.className = "fantasma rlp-barra-cerrar";
   x.setAttribute("aria-label", "Cerrar");
   x.textContent = "✕";
   x.onclick = () => {

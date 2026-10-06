@@ -151,13 +151,14 @@ clase. Si te preocupa la cuota, revisa **Firestore → Uso** en la consola de Fi
 
 ## 7. Programas `.exe` de los alumnos
 
-En cada actividad de código el alumno puede usar **⚙ Crear programa .exe** para descargar su
+En cada actividad de código, en computadora, el alumno puede usar **⚙ Crear programa .exe** para descargar su
 programa como un `.exe` de Windows que se abre sin instalar Python (ver el
 [manual del alumno](MANUAL-ALUMNO.md#8-crear-un-programa-exe)). Se arma en el navegador, sin
 servidor; el contador **Programas .exe** del detalle del alumno dice cuántos ha creado.
 
-- Solo **Windows 10 u 11 de 64 bits** (x64). Se puede descargar desde cualquier equipo
-  (Chromebook, Android, Mac), pero solo se abre en Windows.
+- Solo **Windows 10 u 11 de 64 bits** (x64). El botón solo aparece en computadoras con pantalla
+  grande (no en celulares ni tabletas); se puede crear desde una Mac, Linux o Chromebook, pero
+  solo se abre en Windows.
 - Solo la **biblioteca estándar** de Python: sin paquetes de `pip`. Tampoco trae `tkinter` ni
   `turtle` (el Python "embeddable" de Windows no los incluye).
 - **No está firmado**: Windows SmartScreen muestra "Windows protegió tu PC"; hay que elegir
